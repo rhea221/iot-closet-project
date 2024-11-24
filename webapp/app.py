@@ -38,18 +38,30 @@ def upload_image_to_supabase(file, file_name):
 def save_image_metadata_to_supabase(image_url, tags):
     """Save image metadata to Supabase database."""
     try:
+        # Prepare data
         data = {
             "image_url": image_url,
-            "tags": tags,
+            "tags": tags[:255],  # Truncate if necessary
             "created_at": datetime.now(timezone.utc).isoformat()
         }
+        
+        # Log data for debugging
+        st.write("Data being sent to Supabase:", data)
+
+        # Insert into Supabase
         response = supabase.table("closet-items").insert(data).execute()
+
+        # Log response for debugging
+        st.write("Supabase response:", response)
+
         if response.error:
-            raise Exception(response.error)
+            st.error(f"Supabase error: {response.error}")
+            return False
         return True
     except Exception as e:
-        st.error(f"Error saving metadata to Supabase: {e}")
+        st.error(f"Unexpected error: {e}")
         return False
+
 
 # Initialize session state
 if "uploaded_image" not in st.session_state:
