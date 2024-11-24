@@ -5,6 +5,22 @@ from dotenv import load_dotenv
 import os
 import uuid
 from datetime import datetime, timezone
+import logging
+
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,  # Set the logging level to DEBUG for detailed output
+    format="%(asctime)s [%(levelname)s] %(message)s",  # Log format with timestamp and level
+    handlers=[
+        logging.StreamHandler(),  # Output logs to the console
+        logging.FileHandler("debug.log", mode="w")  # Save logs to a file named debug.log
+    ]
+)
+
+# Example debug log to verify configuration
+logging.info("Debug logging is enabled.")
+
+
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
@@ -107,3 +123,5 @@ if st.session_state.image_url:
             st.success("Tags saved successfully!")
         else:
             st.error("Failed to save tags.")
+
+
