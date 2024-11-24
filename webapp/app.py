@@ -5,22 +5,6 @@ from dotenv import load_dotenv
 import os
 import uuid
 from datetime import datetime, timezone
-import logging
-
-# Configure logging
-logging.basicConfig(
-    level=logging.DEBUG,  # Set the logging level to DEBUG for detailed output
-    format="%(asctime)s [%(levelname)s] %(message)s",  # Log format with timestamp and level
-    handlers=[
-        logging.StreamHandler(),  # Output logs to the console
-        logging.FileHandler("debug.log", mode="w")  # Save logs to a file named debug.log
-    ]
-)
-
-# Example debug log to verify configuration
-logging.info("Debug logging is enabled.")
-
-
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
@@ -28,61 +12,76 @@ load_dotenv(dotenv_path="config/.env")
 # Initialize Supabase
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
+if not supabase_url or not supabase_key:
+    st.error("Supabase credentials are missing. Check your environment variables.")
+    st.stop()
 supabase: Client = create_client(supabase_url, supabase_key)
 
-from supabase import create_client, Client
-from datetime import datetime
-import logging
+# Helper functions
+def generate_unique_filename(extension):
+    """Generate a unique filename using UUID."""
+    return f"{uuid.uuid4()}.{extension}"
 
-def save_image_data(image_url: str, tags: str):
-    """
-    Save image data and tags to Supabase.
-    :param image_url: URL of the image.
-    :param tags: Tags associated with the image.
-    """
+def upload_image_to_supabase(file, file_name):
+    """Upload image to Supabase and return the public URL."""
     try:
-        # Prepare data payload
+        response = supabase.storage.from_("closet-images").upload(file_name, file)
+        if not response.path:
+            raise Exception("Upload failed. No path returned.")
+        public_url = f"{supabase_url}/storage/v1/object/public/closet-images/{file_name}"
+        return public_url
+    except Exception as e:
+        st.error(f"Error uploading image: {e}")
+        return None
+
+def save_image_metadata_to_supabase(image_url, tags):
+    """Save image metadata to Supabase database."""
+    try:
         data = {
             "image_url": image_url,
             "tags": tags,
-            "created_at": datetime.utcnow().isoformat() + "Z"
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
-
-        # Insert data into Supabase
-        logging.info("Sending data to Supabase: %s", data)
         response = supabase.table("closet-items").insert(data).execute()
-
-        # Check the response structure
-        if response and isinstance(response, dict):
-            if "data" in response:
-                logging.info("Data saved successfully: %s", response["data"])
-                return response["data"]
-            elif "error" in response:
-                logging.error("Error from Supabase: %s", response["error"])
-                return None
-            else:
-                logging.warning("Unexpected response structure: %s", response)
-                return None
-        else:
-            logging.error("Invalid response received from Supabase: %s", response)
-            return None
-
+        if response.error:
+            raise Exception(response.error)
+        return True
     except Exception as e:
-        logging.exception("Unexpected error occurred while saving image data: %s", e)
-        return None
+        st.error(f"Error saving metadata to Supabase: {e}")
+        return False
 
-if __name__ == "__main__":
-    # Example data
-    image_url = "https://mbqcfqpgipmtmipuvzlc.supabase.co/storage/v1/object/public/closet-images/5029cd8e-99e9-4f49-81b8-df781387c6ab.jpg"
-    tags = "#pink, #sweatshirt, #cotton, #solid"
+# Streamlit App
+st.title("IoT Closet Manager")
 
-    # Save image data
-    result = save_image_data(image_url, tags)
-    if result:
-        print("Image data saved successfully:", result)
-    else:
-        print("Failed to save image data.")
+# Upload Image Section
+uploaded_file = st.file_uploader("Upload a clothing item...", type=["jpg", "jpeg", "png"])
+if uploaded_file is not None:
+    # Display the uploaded image
+    file_extension = uploaded_file.name.split('.')[-1]
+    unique_filename = generate_unique_filename(file_extension)
+    image = Image.open(uploaded_file)
+    st.image(image, caption="Uploaded Image", use_container_width=True)
 
+    # Upload to Supabase
+    if st.button("Upload Image"):
+        with open(unique_filename, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        image_url = upload_image_to_supabase(unique_filename, unique_filename)
+        if image_url:
+            st.success(f"Image uploaded successfully: {image_url}")
 
+            # Dropdowns for tagging
+            st.subheader("Add Tags to Your Item")
+            color = st.selectbox("Select Color:", ["#red", "#blue", "#green", "#yellow", "#pink", "#black", "#white"], key="color")
+            type = st.selectbox("Select Type:", ["#tshirt", "#sweatshirt", "#jacket", "#pants", "#skirt", "#dress", "#shorts"], key="type")
+            material = st.selectbox("Select Material:", ["#cotton", "#denim", "#leather", "#wool", "#polyester"], key="material")
+            pattern = st.selectbox("Select Pattern:", ["#solid", "#striped", "#checked", "#polka-dot", "#floral"], key="pattern")
 
+            # Combine tags
+            tags = f"{color}, {type}, {material}, {pattern}"
 
+            if st.button("Save Tags"):
+                if save_image_metadata_to_supabase(image_url, tags):
+                    st.success("Tags saved successfully!")
+                else:
+                    st.error("Failed to save tags.")
