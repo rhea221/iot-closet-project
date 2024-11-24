@@ -4,13 +4,13 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
 
 # Initialize Supabase
-supabase_url = "https://mbqcfqpgipmtmipuvzlc.supabase.co"
+supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
 
@@ -41,7 +41,7 @@ def save_image_metadata_to_supabase(image_url, tags):
         data = {
             "image_url": image_url,
             "tags": tags,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.now(timezone.utc).isoformat()
         }
         response = supabase.table("closet-items").insert(data).execute()
         if response.error:
@@ -67,7 +67,7 @@ if uploaded_file is not None:
     file_extension = uploaded_file.name.split('.')[-1]
     unique_filename = generate_unique_filename(file_extension)
     image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+    st.image(image, caption="Uploaded Image", use_container_width=True)
 
     # Save the image in session state
     st.session_state.uploaded_image = image
