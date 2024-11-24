@@ -20,7 +20,7 @@ if not supabase_url or not supabase_key:
 
 # Helper functions
 def generate_unique_filename(extension):
-    """Generate a unique filename using a UUID."""
+    """Generate a unique filename using UUID."""
     return f"{uuid.uuid4()}.{extension}"
 
 def upload_image_to_supabase(file, file_name):
@@ -51,6 +51,12 @@ def save_image_metadata_to_supabase(image_url, tags):
         st.error(f"Error saving metadata to Supabase: {e}")
         return False
 
+# Initialize session state
+if "uploaded_image" not in st.session_state:
+    st.session_state.uploaded_image = None
+if "image_url" not in st.session_state:
+    st.session_state.image_url = None
+
 # Streamlit App
 st.title("IoT Closet Manager")
 
@@ -63,27 +69,29 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file)
     st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    # Upload to Supabase
+    # Save the image in session state
+    st.session_state.uploaded_image = image
     if st.button("Upload Image"):
         with open(unique_filename, "wb") as f:
             f.write(uploaded_file.getbuffer())
         image_url = upload_image_to_supabase(unique_filename, unique_filename)
         if image_url:
+            st.session_state.image_url = image_url
             st.success(f"Image uploaded successfully: {image_url}")
 
-            # Dropdowns for tagging
-            st.subheader("Add Tags to Your Item")
-            color = st.selectbox("Select Color:", ["#red", "#blue", "#green", "#yellow", "#pink", "#black", "#white"])
-            type = st.selectbox("Select Type:", ["#tshirt", "#sweatshirt", "#jacket", "#pants", "#skirt", "#dress", "#shorts"])
-            material = st.selectbox("Select Material:", ["#cotton", "#denim", "#leather", "#wool", "#polyester"])
-            pattern = st.selectbox("Select Pattern:", ["#solid", "#striped", "#checked", "#polka-dot", "#floral"])
+# Check if an image has been uploaded
+if st.session_state.image_url:
+    st.subheader("Add Tags to Your Item")
+    color = st.selectbox("Select Color:", ["#red", "#blue", "#green", "#yellow", "#pink", "#black", "#white"], key="color")
+    type = st.selectbox("Select Type:", ["#tshirt", "#sweatshirt", "#jacket", "#pants", "#skirt", "#dress", "#shorts"], key="type")
+    material = st.selectbox("Select Material:", ["#cotton", "#denim", "#leather", "#wool", "#polyester"], key="material")
+    pattern = st.selectbox("Select Pattern:", ["#solid", "#striped", "#checked", "#polka-dot", "#floral"], key="pattern")
 
-            # Combine tags
-            tags = f"{color}, {type}, {material}, {pattern}"
+    # Combine tags
+    tags = f"{color}, {type}, {material}, {pattern}"
 
-            # Save metadata
-            if st.button("Save Tags"):
-                if save_image_metadata_to_supabase(image_url, tags):
-                    st.success("Tags saved successfully!")
-                else:
-                    st.error("Failed to save tags.")
+    if st.button("Save Tags"):
+        if save_image_metadata_to_supabase(st.session_state.image_url, tags):
+            st.success("Tags saved successfully!")
+        else:
+            st.error("Failed to save tags.")
