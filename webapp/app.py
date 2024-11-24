@@ -69,19 +69,27 @@ if uploaded_file is not None:
         image_url = upload_image_to_supabase(unique_filename, unique_filename)
         if image_url:
             st.success(f"Image uploaded successfully: {image_url}")
+            st.session_state["image_url"] = image_url  # Save the URL in session state
 
-            # Dropdowns for tagging
-            st.subheader("Add Tags to Your Item")
-            color = st.selectbox("Select Color:", ["#red", "#blue", "#green", "#yellow", "#pink", "#black", "#white"], key="color")
-            type = st.selectbox("Select Type:", ["#tshirt", "#sweatshirt", "#jacket", "#pants", "#skirt", "#dress", "#shorts"], key="type")
-            material = st.selectbox("Select Material:", ["#cotton", "#denim", "#leather", "#wool", "#polyester"], key="material")
-            pattern = st.selectbox("Select Pattern:", ["#solid", "#striped", "#checked", "#polka-dot", "#floral"], key="pattern")
+# Check if image URL exists in session state
+if "image_url" in st.session_state:
+    st.subheader("Add Tags to Your Item")
 
-            # Combine tags
-            tags = f"{color}, {type}, {material}, {pattern}"
+    # Dropdowns for tagging
+    color = st.selectbox("Select Color:", ["#red", "#blue", "#green", "#yellow", "#pink", "#black", "#white"], key="color")
+    type = st.selectbox("Select Type:", ["#tshirt", "#sweatshirt", "#jacket", "#pants", "#skirt", "#dress", "#shorts"], key="type")
+    material = st.selectbox("Select Material:", ["#cotton", "#denim", "#leather", "#wool", "#polyester"], key="material")
+    pattern = st.selectbox("Select Pattern:", ["#solid", "#striped", "#checked", "#polka-dot", "#floral"], key="pattern")
 
-            if st.button("Save Tags"):
-                if save_image_metadata_to_supabase(image_url, tags):
-                    st.success("Tags saved successfully!")
-                else:
-                    st.error("Failed to save tags.")
+    # Combine tags and show confirmation
+    tags = f"{color}, {type}, {material}, {pattern}"
+    st.text(f"Your tags: {tags}")
+
+    # Final confirmation to save
+    if st.button("Confirm and Save Tags"):
+        if save_image_metadata_to_supabase(st.session_state["image_url"], tags):
+            st.success("Tags saved successfully!")
+            # Clear session state after saving
+            del st.session_state["image_url"]
+        else:
+            st.error("Failed to save tags.")
