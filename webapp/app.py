@@ -34,16 +34,6 @@ from supabase import create_client, Client
 from datetime import datetime
 import logging
 
-# Initialize logging
-logging.basicConfig(level=logging.DEBUG)
-
-# Supabase credentials
-SUPABASE_URL = "https://mbqcfqpgipmtmipuvzlc.supabase.co"
-SUPABASE_KEY = "your_supabase_key_here"
-
-# Initialize Supabase client
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
 def save_image_data(image_url: str, tags: str):
     """
     Save image data and tags to Supabase.
