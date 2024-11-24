@@ -20,6 +20,8 @@ logging.basicConfig(
 # Example debug log to verify configuration
 logging.info("Debug logging is enabled.")
 
+
+
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
 
@@ -27,6 +29,20 @@ load_dotenv(dotenv_path="config/.env")
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
+
+from supabase import create_client, Client
+from datetime import datetime
+import logging
+
+# Initialize logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Supabase credentials
+SUPABASE_URL = "https://mbqcfqpgipmtmipuvzlc.supabase.co"
+SUPABASE_KEY = "your_supabase_key_here"
+
+# Initialize Supabase client
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def save_image_data(image_url: str, tags: str):
     """
@@ -47,14 +63,18 @@ def save_image_data(image_url: str, tags: str):
         response = supabase.table("closet-items").insert(data).execute()
 
         # Check the response structure
-        if response and hasattr(response, 'data'):
-            logging.info("Data saved successfully: %s", response.data)
-            return response.data
-        elif response and hasattr(response, 'error'):
-            logging.error("Error from Supabase: %s", response.error)
-            return None
+        if response and isinstance(response, dict):
+            if "data" in response:
+                logging.info("Data saved successfully: %s", response["data"])
+                return response["data"]
+            elif "error" in response:
+                logging.error("Error from Supabase: %s", response["error"])
+                return None
+            else:
+                logging.warning("Unexpected response structure: %s", response)
+                return None
         else:
-            logging.warning("Unexpected response structure: %s", response)
+            logging.error("Invalid response received from Supabase: %s", response)
             return None
 
     except Exception as e:
@@ -72,3 +92,7 @@ if __name__ == "__main__":
         print("Image data saved successfully:", result)
     else:
         print("Failed to save image data.")
+
+
+
+
