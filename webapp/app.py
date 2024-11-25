@@ -69,13 +69,15 @@ def fetch_weather_data():
         # Fetch the data from Supabase
         response = supabase.table(table_name).select("*").execute()
         
-        # Check if there's an error attribute
-        if response.error:  # The proper way to check for errors
-            st.error(f"Error fetching data: {response.error.message}")
-            return None
+        # Print the response to understand its structure
+        st.write("Supabase response structure:", response)
         
-        # Return the data
-        return response.data  # The correct way to access the returned data
+        # Check if the response contains data
+        if response.get("data"):
+            return response["data"]
+        else:
+            st.error("No data found in Supabase response.")
+            return None
     except Exception as e:
         st.error(f"Error fetching data: {e}")
         return None
