@@ -145,8 +145,11 @@ with tab2:
     if weather_data:
         # Convert data to DataFrame for better display
         df = pd.DataFrame(weather_data)
-        # Ensure timestamp is in datetime format
-        df["created_at"] = pd.to_datetime(df["created_at"])
+
+        # Ensure 'created_at' is in datetime format with error handling
+        df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
+        df = df.dropna(subset=["created_at"])  # Remove invalid dates
+
         # Display relevant columns
         st.write("Latest Weather Data:")
         st.dataframe(df[["created_at", "temp", "feels_like", "weather", "pop"]])
