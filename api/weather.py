@@ -1,15 +1,27 @@
+import streamlit as st
 import requests
 import os
 from dotenv import load_dotenv
+import datetime
+from supabase import create_client, Client
 
-# Load environment variables from .env
+# Loads environment variables from .env
 load_dotenv(dotenv_path="config/.env")
-API_KEY = os.getenv("WEATHER_API_KEY")  # Replace with your API key if not using .env
+API_KEY = os.getenv("WEATHER_API_KEY") 
 
-# Set your location coordinates
-LAT = "40.7128"  # Example: Latitude for New York
-LON = "-74.0060"  # Example: Longitude for New York
+# Initialises Supabase
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
+if not supabase_url or not supabase_key:
+    st.error("Supabase credentials are missing. Check your environment variables.")
+    st.stop()
+supabase: Client = create_client(supabase_url, supabase_key)
 
+# Location coordinates for London
+LAT = "51.509865"  
+LON = "-0.118092"  
+
+# Fetches weather data from OpenWeather (every 3 hours)
 def get_weather_data():
     """Fetch weather data from OpenWeatherMap API."""
     url = "https://api.openweathermap.org/data/2.5/weather"
@@ -17,7 +29,7 @@ def get_weather_data():
         "lat": LAT,
         "lon": LON,
         "appid": API_KEY,
-        "units": "metric",  # Use 'imperial' for Fahrenheit
+        "units": "metric",  
     }
 
     response = requests.get(url, params=params)
@@ -28,6 +40,24 @@ def get_weather_data():
         print(f"Error fetching weather data: {response.status_code}")
         return None
 
+# Fetches 7-day weather forecast (once daily) 
+def get_weather_forecast():
+    url = f"http://api.openweathermap.org/data/2.5/forecast"
+    params = {
+        "lat": LAT,
+        "lon": LON,
+        "appid": API_KEY,
+        "units": "metric",  
+    }
+
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Error fetching forecast data: {response.status_code}")
+        return None
+
+# Fetches relevant weather information (feels like, min/max temp, description)
 def parse_weather_data(data):
     """Parse and return relevant weather information."""
     if not data:
@@ -45,6 +75,7 @@ def parse_weather_data(data):
         "description": description,
     }
 
+# Prints weather information
 if __name__ == "__main__":
     weather_data = get_weather_data()
     if weather_data:
@@ -59,3 +90,40 @@ if __name__ == "__main__":
             print("Could not parse weather information.")
     else:
         print("Failed to retrieve weather data.")
+
+def save_weather_to_supabase(data, forecast=False):
+    table_name = "weather-data"
+    try:
+        if forecast:
+            # Saves 5-day forecast
+            for entry in data['list']:
+                supabase.table(table_name).insert({
+                    "created_at": entry["dt_txt"],
+                    "temp": entry["main"]["temp"],
+                    "feels_like": entry["main"]["feels_like"],
+                    "weather": entry["weather"][0]["description"],
+                    "pop": entry.get("pop", 0),  # Probability of precipitation
+                    "forecast_day": (datetime.datetime.strptime(entry["dt_txt"], "%Y-%m-%d %H:%M:%S").date())
+                }).execute()
+        else:
+            # Saves current weather
+            supabase.table(table_name).insert({
+                "created_at": datetime.datetime.utcnow().isoformat(),
+                "temp": data["main"]["temp"],
+                "feels_like": data["main"]["feels_like"],
+                "weather": data["weather"][0]["description"],
+                "pop": data.get("rain", {}).get("1h", 0),  # Rain volume in mm
+            }).execute()
+        print("Weather data saved to Supabase!")
+    except Exception as e:
+        print(f"Error saving data to Supabase: {e}")
+
+# Fetches and stores current weather
+current_weather = get_weather_data()
+if current_weather:
+    save_weather_to_supabase(current_weather)
+
+# Fetches and stores 5-day forecast (optional)
+forecast_weather = get_weather_forecast()
+if forecast_weather:
+    save_weather_to_supabase(forecast_weather, forecast=True)
