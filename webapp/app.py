@@ -68,19 +68,17 @@ def fetch_weather_data():
     try:
         # Fetch the data from Supabase
         response = supabase.table(table_name).select("*").execute()
-        
-        # Print the response to understand its structure
-        st.write("Supabase response structure:", response)
-        
+
         # Check if the response contains data
-        if response.get("data"):
-            return response["data"]
+        if response.data:
+            return response.data
         else:
-            st.error("No data found in Supabase response.")
+            st.warning("No weather data available in the table.")
             return None
     except Exception as e:
         st.error(f"Error fetching data: {e}")
         return None
+
 
 
 
