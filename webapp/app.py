@@ -69,16 +69,17 @@ def fetch_weather_data():
         # Fetch the data from Supabase
         response = supabase.table(table_name).select("*").execute()
         
-        # Check for errors in the response
-        if response.get("error"):
-            st.error(f"Error fetching data: {response['error']['message']}")
+        # Check if there's an error attribute
+        if response.error:  # The proper way to check for errors
+            st.error(f"Error fetching data: {response.error.message}")
             return None
         
-        # Return the data if no error
-        return response.get("data", [])
+        # Return the data
+        return response.data  # The correct way to access the returned data
     except Exception as e:
         st.error(f"Error fetching data: {e}")
         return None
+
 
 
 # Streamlit App ------------------------------------------------------------------------------------------------------------
