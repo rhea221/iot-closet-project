@@ -42,9 +42,15 @@ def save_image_metadata_to_supabase(image_url, tags):
             "tags": tags,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
+        # Insert data into Supabase table
         response = supabase.table("closet-items").insert(data).execute()
-        if response.error:
-            raise Exception(response.error)
+        
+        # Check for errors in the response
+        if hasattr(response, 'status_code') and response.status_code != 201:
+            raise Exception(f"Error: {response.json()}")
+
+        # Log success
+        st.info(f"Supabase response: {response.data}")
         return True
     except Exception as e:
         st.error(f"Error saving metadata to Supabase: {e}")
