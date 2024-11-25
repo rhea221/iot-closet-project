@@ -95,20 +95,21 @@ def save_weather_to_supabase(data, forecast=False):
     table_name = "weather-data"
     try:
         if forecast:
-            # Saves 5-day forecast
+            # Save 5-day forecast
             for entry in data['list']:
+                forecast_day = datetime.datetime.strptime(entry["dt_txt"], "%Y-%m-%d %H:%M:%S").date()
                 supabase.table(table_name).insert({
-                    "created_at": entry["dt_txt"],
+                    "created_at": entry["dt_txt"],  # Already in ISO format
                     "temp": entry["main"]["temp"],
                     "feels_like": entry["main"]["feels_like"],
                     "weather": entry["weather"][0]["description"],
                     "pop": entry.get("pop", 0),  # Probability of precipitation
-                    "forecast_day": (datetime.datetime.strptime(entry["dt_txt"], "%Y-%m-%d %H:%M:%S").date())
+                    "forecast_day": forecast_day.isoformat()  # Convert date to string
                 }).execute()
         else:
-            # Saves current weather
+            # Save current weather
             supabase.table(table_name).insert({
-                "created_at": datetime.datetime.utcnow().isoformat(),
+                "created_at": datetime.datetime.utcnow().isoformat(),  # Current timestamp
                 "temp": data["main"]["temp"],
                 "feels_like": data["main"]["feels_like"],
                 "weather": data["weather"][0]["description"],

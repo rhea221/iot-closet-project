@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 from PIL import Image
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -99,3 +100,41 @@ if "image_url" in st.session_state:
             del st.session_state["image_url"]
         else:
             st.error("Failed to save tags.")
+
+#------------------------------
+# Fetch Weather Data
+def fetch_weather_data():
+    """Fetch weather data from the Supabase table."""
+    table_name = "weather-data"
+    try:
+        response = supabase.table(table_name).select("*").execute()
+        if response.status_code == 200:
+            return response.data
+        else:
+            st.error(f"Failed to fetch weather data: {response.status_code}")
+            return None
+    except Exception as e:
+        st.error(f"Error fetching data: {e}")
+        return None
+
+# Streamlit Interface
+st.title("Weather Data")
+
+# Fetch data and display
+weather_data = fetch_weather_data()
+
+if weather_data:
+    # Convert data to DataFrame for better display
+    df = pd.DataFrame(weather_data)
+    # Ensure timestamp is in datetime format
+    df["created_at"] = pd.to_datetime(df["created_at"])
+    # Display relevant columns
+    st.write("Latest Weather Data:")
+    st.dataframe(df[["created_at", "temp", "feels_like", "weather", "pop"]])
+
+    # Aggregated Statistics
+    st.write("Summary Statistics:")
+    stats = df[["temp", "feels_like", "pop"]].describe()
+    st.table(stats)
+else:
+    st.warning("No weather data found.")
