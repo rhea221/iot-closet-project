@@ -135,6 +135,7 @@ with tab1:
 
 # Weather Data ------------------------------------------
 with tab2:
+    # Weather Data Section
     st.header("Weather Data")
 
     # Fetch data and display
@@ -154,4 +155,4 @@ with tab2:
         stats = df[["temp", "feels_like", "pop"]].describe()
         st.table(stats)
     else:
-        st.warning("No weather data found.")
+        st.warning("No weather data found. Please check your data source.")
