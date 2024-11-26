@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import os
 from dotenv import load_dotenv
-import datetime
+from datetime import datetime, timezone
 from supabase import create_client, Client
 
 # Loads environment variables from .env
@@ -96,24 +96,24 @@ def save_weather_to_supabase(data, forecast=False):
     try:
         if forecast:
             # Save 5-day forecast
-            for entry in data['list']:
-                forecast_day = datetime.datetime.strptime(entry["dt_txt"], "%Y-%m-%d %H:%M:%S").date()
+            for entry in data["list"]:
+                forecast_day = datetime.strptime(entry["dt_txt"], "%Y-%m-%d %H:%M:%S").date()
                 supabase.table(table_name).insert({
-                    "created_at": entry["dt_txt"],  # Already in ISO format
+                    "created_at": datetime.now(timezone.utc).isoformat(),  # Log current time in UTC
                     "temp": entry["main"]["temp"],
                     "feels_like": entry["main"]["feels_like"],
                     "weather": entry["weather"][0]["description"],
-                    "pop": entry.get("pop", 0),  # Probability of precipitation
-                    "forecast_day": forecast_day.isoformat()  # Convert date to string
+                    "pop": entry.get("pop", 0),
+                    "forecast_day": forecast_day.isoformat()  # Use forecasted day
                 }).execute()
         else:
             # Save current weather
             supabase.table(table_name).insert({
-                "created_at": datetime.datetime.utcnow().isoformat(),  # Current timestamp
+                "created_at": datetime.now(timezone.utc).isoformat(),  # Log current time in UTC
                 "temp": data["main"]["temp"],
                 "feels_like": data["main"]["feels_like"],
                 "weather": data["weather"][0]["description"],
-                "pop": data.get("rain", {}).get("1h", 0),  # Rain volume in mm
+                "pop": data.get("rain", {}).get("1h", 0),
             }).execute()
         print("Weather data saved to Supabase!")
     except Exception as e:
