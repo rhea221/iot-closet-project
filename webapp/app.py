@@ -145,41 +145,38 @@ with tab2:
     # Fetch data and display
     weather_data = fetch_weather_data()
 
-    if weather_data:
-        # Convert data to DataFrame for better display
-        df = pd.DataFrame(weather_data)
+    st.title("Weather Data - Time Series")
 
-        # Ensure 'created_at' is in datetime format with error handling
-        df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
-        df = df.dropna(subset=["created_at"])  # Remove invalid dates
+# Fetch weather data
+weather_data = fetch_weather_data()
 
-        # Sort data by timestamp for proper time-series plotting
-        df = df.sort_values(by="created_at")
+if weather_data:
+    # Convert data to DataFrame
+    df = pd.DataFrame(weather_data)
 
-        # Display relevant columns
-        st.write("Latest Weather Data:")
-        st.dataframe(df[["created_at", "temp", "feels_like", "weather", "pop"]])
+    # Ensure 'created_at' is in datetime format
+    df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
+    df = df.dropna(subset=["created_at"])  # Remove invalid dates
 
-        # Time-Series Temperature Trends
-        st.write("Temperature Trends Over Time:")
-        plt.figure(figsize=(10, 6))
-        plt.plot(df["created_at"], df["temp"], label="Temperature (°C)", marker="o")
-        plt.xlabel("Time")
-        plt.ylabel("Temperature (°C)")
-        plt.title("Temperature Trends Over Time")
-        plt.grid(True)
-        plt.xticks(rotation=45)
+    # Remove future weather data (if any)
+    current_time = pd.Timestamp.now()
+    df = df[df["created_at"] <= current_time]
 
-        # Annotate Weather Conditions
-        for i, row in df.iterrows():
-            plt.text(row["created_at"], row["temp"], row["weather"], fontsize=8, rotation=45, ha="right")
+    # Sort by 'created_at' for proper time-series plotting
+    df = df.sort_values(by="created_at")
 
-        plt.legend()
-        st.pyplot(plt)
+    # Line chart with hover information
+    st.subheader("Temperature Trends Over Time")
+    if "temp" in df and "feels_like" in df and "weather" in df:
+        hover_df = df[["created_at", "temp", "feels_like", "weather"]].copy()
+        hover_df.set_index("created_at", inplace=True)
+        
+        # Add hover information as tooltips
+        hover_chart = st.line_chart(hover_df[["temp", "feels_like"]])
+        st.write("Hover over points on the chart to see weather conditions.")
 
-        # Aggregated Statistics
-        st.write("Summary Statistics:")
-        stats = df[["temp", "feels_like", "pop"]].describe()
-        st.table(stats)
-    else:
-        st.warning("No weather data found. Please check your data source.")
+    # Show the latest weather data as a table
+    st.subheader("Latest Weather Data")
+    st.dataframe(df[["created_at", "temp", "feels_like", "weather", "pop"]])
+else:
+    st.warning("No weather data found. Please check your data source.")
