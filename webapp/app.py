@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 import os
 import uuid
 from datetime import datetime, timezone
-import matplotlib.pyplot as plt
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
@@ -50,9 +49,9 @@ def save_image_metadata_to_supabase(image_url, tags):
         }
         # Insert data into Supabase table
         response = supabase.table("closet-items").insert(data).execute()
-        
+
         # Check for errors in the response
-        if hasattr(response, 'status_code') and response.status_code != 201:
+        if hasattr(response, "status_code") and response.status_code != 201:
             raise Exception(f"Error: {response.json()}")
 
         # Log success
@@ -61,10 +60,10 @@ def save_image_metadata_to_supabase(image_url, tags):
     except Exception as e:
         st.error(f"Error saving metadata to Supabase: {e}")
         return False
-    
+
 # Weather Data ------------------------------------------
 def fetch_weather_data():
-    """Fetch weather data from the Supabase table."""
+    """Fetch current weather data from the Supabase table."""
     table_name = "weather-data"
     try:
         # Fetch the data from Supabase
@@ -79,9 +78,6 @@ def fetch_weather_data():
     except Exception as e:
         st.error(f"Error fetching data: {e}")
         return None
-
-
-
 
 # Streamlit App ------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------
@@ -136,38 +132,30 @@ with tab1:
                 st.error("Failed to save tags.")
 
 # Weather Data ------------------------------------------
-import matplotlib.pyplot as plt
-
 with tab2:
-    # Weather Data Section
     st.header("Weather Data")
 
     # Fetch data and display
     weather_data = fetch_weather_data()
 
-    st.title("Weather Data - Time Series")
+    if weather_data:
+        # Convert data to DataFrame
+        df = pd.DataFrame(weather_data)
 
-# Fetch weather data
-weather_data = fetch_weather_data()
+        # Ensure 'created_at' is in datetime format
+        df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
+        df = df.dropna(subset=["created_at"])  # Remove invalid dates
 
-if weather_data:
-    # Convert data to DataFrame
-    df = pd.DataFrame(weather_data)
+        # Sort by 'created_at' for proper time-series plotting
+        df = df.sort_values(by="created_at")
 
-    # Ensure 'created_at' is in datetime format
-    df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
-    df = df.dropna(subset=["created_at"])  # Remove invalid dates
+        # Line chart for temperature trends
+        st.subheader("Temperature Trends Over Time")
+        if "temp" in df and "created_at" in df:
+            st.line_chart(data=df.set_index("created_at")[["temp", "feels_like"]])
 
-    # Sort by 'created_at' for proper time-series plotting
-    df = df.sort_values(by="created_at")
-
-    # Line chart for temperature trends
-    st.subheader("Temperature Trends Over Time")
-    if "temp" in df and "created_at" in df:
-        st.line_chart(data=df.set_index("created_at")[["temp", "feels_like"]])
-
-    # Show the latest weather data as a table
-    st.subheader("Latest Weather Data")
-    st.dataframe(df[["created_at", "temp", "feels_like", "weather", "pop"]])
-else:
-    st.warning("No weather data found. Please check your data source.")
+        # Show the latest weather data as a table
+        st.subheader("Latest Weather Data")
+        st.dataframe(df[["created_at", "temp", "feels_like", "weather", "pop"]])
+    else:
+        st.warning("No weather data found. Please check your data source.")
