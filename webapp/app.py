@@ -152,9 +152,16 @@ if weather_data:
     # Convert data to DataFrame
     df = pd.DataFrame(weather_data)
 
-    # Ensure 'created_at' is in datetime format
+    # Ensure 'created_at' is in datetime format with error handling
     df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
-    df = df.dropna(subset=["created_at"])  # Remove invalid dates
+
+    # Drop rows with invalid 'created_at'
+    df = df.dropna(subset=["created_at"])
+
+    # Ensure 'created_at' column has only datetime type
+    if not pd.api.types.is_datetime64_any_dtype(df["created_at"]):
+        st.error("Error: 'created_at' column is not properly formatted as datetime.")
+        st.stop()
 
     # Remove future weather data (if any)
     current_time = pd.Timestamp.now()
@@ -166,12 +173,8 @@ if weather_data:
     # Line chart with hover information
     st.subheader("Temperature Trends Over Time")
     if "temp" in df and "feels_like" in df and "weather" in df:
-        hover_df = df[["created_at", "temp", "feels_like", "weather"]].copy()
-        hover_df.set_index("created_at", inplace=True)
-        
-        # Add hover information as tooltips
-        hover_chart = st.line_chart(hover_df[["temp", "feels_like"]])
-        st.write("Hover over points on the chart to see weather conditions.")
+        # Prepare data for the Streamlit line chart
+        st.line_chart(data=df.set_index("created_at")[["temp", "feels_like"]])
 
     # Show the latest weather data as a table
     st.subheader("Latest Weather Data")
