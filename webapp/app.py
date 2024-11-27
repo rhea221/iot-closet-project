@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 import uuid
 from datetime import datetime, timezone
+import matplotlib.pyplot as plt
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
@@ -135,6 +136,8 @@ with tab1:
                 st.error("Failed to save tags.")
 
 # Weather Data ------------------------------------------
+import matplotlib.pyplot as plt
+
 with tab2:
     # Weather Data Section
     st.header("Weather Data")
@@ -150,9 +153,29 @@ with tab2:
         df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
         df = df.dropna(subset=["created_at"])  # Remove invalid dates
 
+        # Sort data by timestamp for proper time-series plotting
+        df = df.sort_values(by="created_at")
+
         # Display relevant columns
         st.write("Latest Weather Data:")
         st.dataframe(df[["created_at", "temp", "feels_like", "weather", "pop"]])
+
+        # Time-Series Temperature Trends
+        st.write("Temperature Trends Over Time:")
+        plt.figure(figsize=(10, 6))
+        plt.plot(df["created_at"], df["temp"], label="Temperature (°C)", marker="o")
+        plt.xlabel("Time")
+        plt.ylabel("Temperature (°C)")
+        plt.title("Temperature Trends Over Time")
+        plt.grid(True)
+        plt.xticks(rotation=45)
+
+        # Annotate Weather Conditions
+        for i, row in df.iterrows():
+            plt.text(row["created_at"], row["temp"], row["weather"], fontsize=8, rotation=45, ha="right")
+
+        plt.legend()
+        st.pyplot(plt)
 
         # Aggregated Statistics
         st.write("Summary Statistics:")
