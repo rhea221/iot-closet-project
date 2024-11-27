@@ -2,6 +2,19 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 from datetime import datetime, timedelta
 import pytz
+from supabase import create_client, Client
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv(dotenv_path="config/.env")
+
+# Initialize Supabase
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise Exception("Supabase credentials are missing. Check your environment variables.")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Path to your service account JSON key file
 SERVICE_ACCOUNT_FILE = 'config/service_account_key.json'  # Update with actual path
@@ -14,7 +27,7 @@ def authenticate_google_calendar():
     service = build('calendar', 'v3', credentials=credentials)
     return service
 
-def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
+def get_upcoming_events_today(calendar_id='primary'):
     """
     Fetch all upcoming events for the remainder of the current day from Google Calendar.
 
@@ -22,7 +35,7 @@ def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
     - calendar_id: ID of the calendar to access (default is 'primary' for main calendar)
 
     Returns:
-    - List of event titles (summaries) for the remaining events of the current day.
+    - List of event dictionaries with titles and start times for today's remaining events.
     """
     service = authenticate_google_calendar()
     
@@ -44,16 +57,35 @@ def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
         print("No upcoming events found for today.")
         return []
 
-    # Collect and return only the event titles
-    event_titles = [event.get("summary", "No Title") for event in events]
-    return event_titles
+    # Collect event summaries and start times
+    event_details = [
+        {"title": event.get("summary", "No Title"), "start_time": event["start"].get("dateTime", event["start"].get("date"))}
+        for event in events
+    ]
+    return event_details
+
+def save_events_to_supabase(events):
+    """Save today's events to the Supabase database."""
+    table_name = "calendar-events"
+    try:
+        for event in events:
+            # Insert each event into the Supabase table
+            supabase.table(table_name).insert({
+                "title": event["title"],
+                "start_time": event["start_time"],
+                "created_at": datetime.now(pytz.UTC).isoformat()
+            }).execute()
+        print("Events saved to Supabase successfully!")
+    except Exception as e:
+        print(f"Error saving events to Supabase: {e}")
 
 # Example usage
 if __name__ == "__main__":
-    upcoming_events_today = get_upcoming_events_today()
-    if upcoming_events_today:
+    events_today = get_upcoming_events_today()
+    if events_today:
         print("Upcoming Events Today:")
-        for title in upcoming_events_today:
-            print("-", title)
+        for event in events_today:
+            print(f"- {event['title']} at {event['start_time']}")
+        save_events_to_supabase(events_today)
     else:
         print("No upcoming events found for today.")

@@ -133,7 +133,7 @@ with tab1:
 
 # Weather Data ------------------------------------------
 with tab2:
-    st.header("Weather Data")
+    st.header("My Database")
 
     # Fetch data and display
     weather_data = fetch_weather_data()
@@ -159,3 +159,33 @@ with tab2:
         st.dataframe(df[["created_at", "temp", "feels_like", "weather", "pop"]])
     else:
         st.warning("No weather data found. Please check your data source.")
+
+ # Calendar Events Section
+    st.subheader("Today's Events")
+
+    def fetch_calendar_events():
+        """Fetch today's calendar events from Supabase."""
+        table_name = "calendar-events"
+        try:
+            response = supabase.table(table_name).select("*").execute()
+            if response.data:
+                return response.data
+            else:
+                st.warning("No calendar events available.")
+                return None
+        except Exception as e:
+            st.error(f"Error fetching calendar events: {e}")
+            return None
+
+    # Display calendar events
+    calendar_events = fetch_calendar_events()
+    if calendar_events:
+        # Convert data to DataFrame
+        events_df = pd.DataFrame(calendar_events)
+        events_df["start_time"] = pd.to_datetime(events_df["start_time"], errors="coerce")
+        events_df = events_df.dropna(subset=["start_time"]).sort_values(by="start_time")
+
+        st.write("Today's Events")
+        st.dataframe(events_df[["title", "start_time"]])
+    else:
+        st.warning("No events to display.")
