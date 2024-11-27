@@ -166,19 +166,6 @@ if weather_data:
     if "temp" in df and "created_at" in df:
         st.line_chart(data=df.set_index("created_at")[["temp", "feels_like"]])
 
-    # Additional details on weather conditions
-    st.subheader("Weather Conditions Timeline")
-    if "weather" in df:
-        fig, ax = plt.subplots()
-        ax.plot(df["created_at"], df["temp"], label="Temperature (°C)", color="blue")
-        ax.scatter(df["created_at"], df["temp"], c="red", label="Weather Conditions", alpha=0.6)
-        ax.set_xlabel("Time")
-        ax.set_ylabel("Temperature (°C)")
-        ax.set_title("Temperature and Weather Conditions Over Time")
-        ax.legend()
-        plt.xticks(rotation=45)
-        st.pyplot(fig)
-
     # Show the latest weather data as a table
     st.subheader("Latest Weather Data")
     st.dataframe(df[["created_at", "temp", "feels_like", "weather", "pop"]])
