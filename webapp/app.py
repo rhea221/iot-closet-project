@@ -84,7 +84,7 @@ def fetch_weather_data():
 
 st.title("IoT Closet Manager")
 
-tab1, tab2 = st.tabs(["My Closet", "Weather Data"])
+tab1, tab2 = st.tabs(["My Closet", "My Database"])
 
 # My Closet --------------------------------------
 with tab1:
