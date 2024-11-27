@@ -21,28 +21,10 @@ supabase: Client = create_client(supabase_url, supabase_key)
 LAT = "51.509865"  
 LON = "-0.118092"  
 
-# Fetches weather data from OpenWeather (every 3 hours)
+# Fetches current weather data from OpenWeather API
 def get_weather_data():
-    """Fetch weather data from OpenWeatherMap API."""
+    """Fetch current weather data from OpenWeatherMap API."""
     url = "https://api.openweathermap.org/data/2.5/weather"
-    params = {
-        "lat": LAT,
-        "lon": LON,
-        "appid": API_KEY,
-        "units": "metric",  
-    }
-
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        data = response.json()
-        return data
-    else:
-        print(f"Error fetching weather data: {response.status_code}")
-        return None
-
-# Fetches 7-day weather forecast (once daily) 
-def get_weather_forecast():
-    url = f"http://api.openweathermap.org/data/2.5/forecast"
     params = {
         "lat": LAT,
         "lon": LON,
@@ -54,77 +36,51 @@ def get_weather_forecast():
     if response.status_code == 200:
         return response.json()
     else:
-        print(f"Error fetching forecast data: {response.status_code}")
+        print(f"Error fetching weather data: {response.status_code}")
         return None
 
-# Fetches relevant weather information (feels like, min/max temp, description)
+# Parses relevant weather information (feels like, temperature, description)
 def parse_weather_data(data):
     """Parse and return relevant weather information."""
     if not data:
         return None
 
-    feels_like = data["main"].get("feels_like")
-    temp_min = data["main"].get("temp_min")
-    temp_max = data["main"].get("temp_max")
-    description = data["weather"][0].get("description")
-
     return {
-        "feels_like": feels_like,
-        "temp_min": temp_min,
-        "temp_max": temp_max,
-        "description": description,
+        "feels_like": data["main"].get("feels_like"),
+        "temp": data["main"].get("temp"),
+        "weather": data["weather"][0].get("description"),
+        "pop": data.get("rain", {}).get("1h", 0),  # Rain volume in the last hour
     }
 
-# Prints weather information
-if __name__ == "__main__":
-    weather_data = get_weather_data()
-    if weather_data:
-        weather_info = parse_weather_data(weather_data)
-        if weather_info:
-            print("Weather Information:")
-            print(f"- Feels Like: {weather_info['feels_like']}°C")
-            print(f"- Min Temperature: {weather_info['temp_min']}°C")
-            print(f"- Max Temperature: {weather_info['temp_max']}°C")
-            print(f"- Description: {weather_info['description'].capitalize()}")
-        else:
-            print("Could not parse weather information.")
-    else:
-        print("Failed to retrieve weather data.")
-
-def save_weather_to_supabase(data, forecast=False):
+# Saves current weather data to Supabase
+def save_weather_to_supabase(data):
+    """Save current weather data to the Supabase database."""
     table_name = "weather-data"
     try:
-        if forecast:
-            # Save 5-day forecast
-            for entry in data["list"]:
-                forecast_day = datetime.strptime(entry["dt_txt"], "%Y-%m-%d %H:%M:%S").date()
-                supabase.table(table_name).insert({
-                    "created_at": datetime.now(timezone.utc).isoformat(),  # Log current time in UTC
-                    "temp": entry["main"]["temp"],
-                    "feels_like": entry["main"]["feels_like"],
-                    "weather": entry["weather"][0]["description"],
-                    "pop": entry.get("pop", 0),
-                    "forecast_day": forecast_day.isoformat()  # Use forecasted day
-                }).execute()
-        else:
-            # Save current weather
-            supabase.table(table_name).insert({
-                "created_at": datetime.now(timezone.utc).isoformat(),  # Log current time in UTC
-                "temp": data["main"]["temp"],
-                "feels_like": data["main"]["feels_like"],
-                "weather": data["weather"][0]["description"],
-                "pop": data.get("rain", {}).get("1h", 0),
-            }).execute()
+        supabase.table(table_name).insert({
+            "created_at": datetime.now(timezone.utc).isoformat(),  # Log current time in UTC
+            "temp": data["temp"],
+            "feels_like": data["feels_like"],
+            "weather": data["weather"],
+            "pop": data["pop"],
+        }).execute()
         print("Weather data saved to Supabase!")
     except Exception as e:
         print(f"Error saving data to Supabase: {e}")
 
-# Fetches and stores current weather
-current_weather = get_weather_data()
-if current_weather:
-    save_weather_to_supabase(current_weather)
-
-# Fetches and stores 5-day forecast (optional)
-forecast_weather = get_weather_forecast()
-if forecast_weather:
-    save_weather_to_supabase(forecast_weather, forecast=True)
+# Fetch and store current weather
+if __name__ == "__main__":
+    current_weather = get_weather_data()
+    if current_weather:
+        weather_info = parse_weather_data(current_weather)
+        if weather_info:
+            print("Current Weather Information:")
+            print(f"- Temperature: {weather_info['temp']}°C")
+            print(f"- Feels Like: {weather_info['feels_like']}°C")
+            print(f"- Weather: {weather_info['weather'].capitalize()}")
+            print(f"- Precipitation (last hour): {weather_info['pop']} mm")
+            save_weather_to_supabase(weather_info)
+        else:
+            print("Failed to parse weather data.")
+    else:
+        print("Failed to retrieve weather data.")
