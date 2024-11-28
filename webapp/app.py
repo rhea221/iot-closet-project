@@ -97,7 +97,28 @@ with tab1:
         file_extension = uploaded_file.name.split('.')[-1]
         unique_filename = generate_unique_filename(file_extension)
         image = Image.open(uploaded_file)
-        st.image(image, caption="Uploaded Image", use_container_width=False, width=300)
+        
+        # Center and style the image with CSS
+        st.markdown(
+            """
+            <style>
+            .centered-image {
+                display: flex;
+                justify-content: center;
+            }
+            .rounded-image {
+                border-radius: 13px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown('<div class="centered-image">', unsafe_allow_html=True)
+            st.image(image, caption="Uploaded Image", use_container_width=False, width=300, output_format="PNG", clamp=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         # Upload to Supabase
         if st.button("Upload Image"):
