@@ -97,7 +97,7 @@ with tab1:
         file_extension = uploaded_file.name.split('.')[-1]
         unique_filename = generate_unique_filename(file_extension)
         image = Image.open(uploaded_file)
-        st.image(image, caption="Uploaded Image", use_container_width=True)
+        st.image(image, caption="Uploaded Image", use_container_width=False, width=300)
 
         # Upload to Supabase
         if st.button("Upload Image"):
