@@ -1,0 +1,13 @@
+requests
+flask           # web app
+msal            # Microsoft Graph API
+rpi_ws281x      # LED controls
+python-dotenv
+pandas
+matplotlib
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+streamlit
+supabase
+pillow

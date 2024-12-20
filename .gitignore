@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+secrets.json
+
+# VS Code
+.vscode/
+
+# Node
+node_modules/
+
+# API Information
+config/.env
+
+# Service Account Key JSON
+config/service_account_key.json
+
+# Ignore virtual environment
+.venv/
+
+# Ignore database file
+data/*.db
