@@ -29,27 +29,18 @@ def authenticate_google_calendar():
     service = build('calendar', 'v3', credentials=credentials)
     return service
 
-def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
+def get_upcoming_events_today(calendar_id='rhea.p3rk'):
     """
     Fetch all upcoming events for the remainder of the current day from Google Calendar.
-
-    Parameters:
-    - calendar_id: ID of the calendar to access (default is 'primary' for main calendar)
-
-    Returns:
-    - List of event dictionaries with titles and start times for today's remaining events.
     """
     service = authenticate_google_calendar()
-    
-    # Set timeMin to the current time and timeMax to the end of today in UTC
     now = datetime.now(pytz.UTC)
     end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
 
-    # Fetch events within this time range
     events_result = service.events().list(
         calendarId=calendar_id,
-        timeMin=now.isoformat(),         # Start from the current time
-        timeMax=end_of_day.isoformat(),  # End at the last second of the day
+        timeMin=now.isoformat(),
+        timeMax=end_of_day.isoformat(),
         singleEvents=True,
         orderBy='startTime'
     ).execute()
@@ -59,12 +50,27 @@ def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
         print("No upcoming events found for today.")
         return []
 
-    # Collect event summaries and start times
-    event_details = [
-        {"title": event.get("summary", "No Title"), "start_time": event["start"].get("dateTime", event["start"].get("date"))}
-        for event in events
-    ]
+    event_details = []
+    for event in events:
+        details = {
+            "title": event.get("summary", "No Title"),
+            "start_time": event["start"].get("dateTime", event["start"].get("date")),
+            "location": event.get("location", "Unknown"),
+            "description": event.get("description", "No Description"),
+            "duration": calculate_duration(event.get("start"), event.get("end"))
+        }
+        event_details.append(details)
+
     return event_details
+
+def calculate_duration(start, end):
+    """
+    Calculate the duration of an event.
+    """
+    start_time = datetime.fromisoformat(start.get("dateTime", start.get("date")))
+    end_time = datetime.fromisoformat(end.get("dateTime", end.get("date")))
+    return (end_time - start_time).total_seconds() / 3600  # Return duration in hours
+
 
 def save_events_to_supabase(events):
     """Save today's events to the Supabase database."""
