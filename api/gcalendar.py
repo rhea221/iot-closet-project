@@ -29,7 +29,7 @@ def authenticate_google_calendar():
     service = build('calendar', 'v3', credentials=credentials)
     return service
 
-def get_upcoming_events_today(calendar_id='rhea.p3rk'):
+def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
     """
     Fetch all upcoming events for the remainder of the current day from Google Calendar.
     """
