@@ -47,7 +47,7 @@ def save_image_metadata_to_supabase(image_url, tags):
     try:
         data = {
             "image_url": image_url,
-            "tags": tags,
+            "tags": tags,  # Save tags as JSON
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         # Insert data into Supabase table
@@ -86,24 +86,6 @@ def generate_tags_with_openai(image_url):
     except Exception as e:
         st.error(f"Error generating tags with OpenAI: {e}")
         return []
-
-# Weather Data ------------------------------------------
-def fetch_weather_data():
-    """Fetch current weather data from the Supabase table."""
-    table_name = "weather-data"
-    try:
-        # Fetch the data from Supabase
-        response = supabase.table(table_name).select("*").execute()
-
-        # Check if the response contains data
-        if response.data:
-            return response.data
-        else:
-            st.warning("No weather data available in the table.")
-            return None
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
-        return None
 
 # Streamlit App ------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------
@@ -162,6 +144,10 @@ with tab1:
                 tags = generate_tags_with_openai(image_url)
                 if tags:
                     st.success(f"Generated Tags: {', '.join(tags)}")
+                    # Display tags below the image
+                    st.markdown("**Generated Tags:**")
+                    st.write(tags)
+
                     # Save tags to Supabase
                     if save_image_metadata_to_supabase(image_url, tags):
                         st.success("Tags saved successfully!")
