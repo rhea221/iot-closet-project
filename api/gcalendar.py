@@ -7,6 +7,7 @@ from supabase import create_client, Client
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
 import pytz
+from dateutil import parser
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
@@ -67,10 +68,11 @@ def calculate_duration(start, end):
     """
     Calculate the duration of an event.
     """
-    start_time = datetime.fromisoformat(start.get("dateTime", start.get("date")))
-    end_time = datetime.fromisoformat(end.get("dateTime", end.get("date")))
-    return (end_time - start_time).total_seconds() / 3600  # Return duration in hours
+    # Use dateutil.parser to handle various datetime formats
+    start_time = parser.isoparse(start.get("dateTime", start.get("date")))
+    end_time = parser.isoparse(end.get("dateTime", end.get("date")))
 
+    return (end_time - start_time).total_seconds() / 3600  # Return duration in hours
 
 def save_events_to_supabase(events):
     """Save today's events to the Supabase database."""
