@@ -27,14 +27,15 @@ def generate_unique_filename(extension):
     return f"{uuid.uuid4()}.{extension}"
 
 # My Closet --------------------------------------
-def upload_image_to_supabase(file, file_name):
+def upload_image_to_supabase(file_path, file_name):
     """Upload image to Supabase and return the public URL."""
     try:
-        response = supabase.storage.from_("closet-images").upload(file_name, file)
-        if not response.path:
-            raise Exception("Upload failed. No path returned.")
-        public_url = f"{supabase_url}/storage/v1/object/public/closet-images/{file_name}"
-        return public_url
+        with open(file_path, "rb") as file:
+            response = supabase.storage.from_("closet-images").upload(file_name, file)
+            if not response.path:
+                raise Exception("Upload failed. No path returned.")
+            public_url = f"{supabase_url}/storage/v1/object/public/closet-images/{file_name}"
+            return public_url
     except Exception as e:
         st.error(f"Error uploading image: {e}")
         return None
@@ -117,14 +118,17 @@ with tab1:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.markdown('<div class="centered-image">', unsafe_allow_html=True)
-            st.image(image, caption="Uploaded Image", use_container_width=False, width=300, output_format="PNG", clamp=True)
+            st.image(image, caption="Uploaded Image", use_column_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
+
+        # Save uploaded image to a temporary file for Supabase upload
+        temp_file_path = f"temp_{unique_filename}"
+        image.save(temp_file_path)
 
         # Upload to Supabase
         if st.button("Upload Image"):
-            with open(unique_filename, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            image_url = upload_image_to_supabase(unique_filename, unique_filename)
+            image_url = upload_image_to_supabase(temp_file_path, unique_filename)
+            os.remove(temp_file_path)  # Remove the temporary file
             if image_url:
                 st.success(f"Image uploaded successfully: {image_url}")
                 st.session_state["image_url"] = image_url  # Save the URL in session state
