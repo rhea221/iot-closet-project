@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 import uuid
 from datetime import datetime, timezone
+import openai
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
@@ -16,6 +17,8 @@ load_dotenv(dotenv_path="config/.env")
 # Initialize Supabase
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
 if not supabase_url or not supabase_key:
     st.error("Supabase credentials are missing. Check your environment variables.")
     st.stop()
@@ -26,9 +29,8 @@ def generate_unique_filename(extension):
     """Generate a unique filename using UUID."""
     return f"{uuid.uuid4()}.{extension}"
 
-# My Closet --------------------------------------
 def upload_image_to_supabase(file_path, file_name):
-    """Upload image to Supabase and return the public URL."""
+    """Upload an image to Supabase and return the public URL."""
     try:
         with open(file_path, "rb") as file:
             response = supabase.storage.from_("closet-images").upload(file_name, file)
@@ -61,6 +63,29 @@ def save_image_metadata_to_supabase(image_url, tags):
     except Exception as e:
         st.error(f"Error saving metadata to Supabase: {e}")
         return False
+
+def generate_tags_with_openai(image_url):
+    """Generate tags for an image using OpenAI GPT."""
+    prompt = f"""
+    Analyze the following clothing item image and provide a list of tags based on the color, type, material, and pattern:
+    Image URL: {image_url}
+
+    Example tags: ["red", "tshirt", "cotton", "solid"]
+    """
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant for analyzing clothing items."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+        )
+        tags = response['choices'][0]['message']['content'].strip()
+        return eval(tags)  # Convert string to list
+    except Exception as e:
+        st.error(f"Error generating tags with OpenAI: {e}")
+        return []
 
 # Weather Data ------------------------------------------
 def fetch_weather_data():
@@ -126,35 +151,22 @@ with tab1:
         image.save(temp_file_path)
 
         # Upload to Supabase
-        if st.button("Upload Image"):
+        if st.button("Upload and Analyze Image"):
             image_url = upload_image_to_supabase(temp_file_path, unique_filename)
             os.remove(temp_file_path)  # Remove the temporary file
             if image_url:
                 st.success(f"Image uploaded successfully: {image_url}")
                 st.session_state["image_url"] = image_url  # Save the URL in session state
 
-    # Check if image URL exists in session state
-    if "image_url" in st.session_state:
-        st.subheader("Add Tags to Your Item")
-
-        # Dropdowns for tagging
-        color = st.selectbox("Select Color:", ["#red", "#blue", "#green", "#yellow", "#pink", "#black", "#white"], key="color")
-        type = st.selectbox("Select Type:", ["#tshirt", "#sweatshirt", "#jacket", "#pants", "#skirt", "#dress", "#shorts"], key="type")
-        material = st.selectbox("Select Material:", ["#cotton", "#denim", "#leather", "#wool", "#polyester"], key="material")
-        pattern = st.selectbox("Select Pattern:", ["#solid", "#striped", "#checked", "#polka-dot", "#floral"], key="pattern")
-
-        # Combine tags and show confirmation
-        tags = f"{color}, {type}, {material}, {pattern}"
-        st.text(f"Your tags: {tags}")
-
-        # Final confirmation to save
-        if st.button("Confirm and Save Tags"):
-            if save_image_metadata_to_supabase(st.session_state["image_url"], tags):
-                st.success("Tags saved successfully!")
-                # Clear session state after saving
-                del st.session_state["image_url"]
-            else:
-                st.error("Failed to save tags.")
+                # Generate tags using OpenAI
+                tags = generate_tags_with_openai(image_url)
+                if tags:
+                    st.success(f"Generated Tags: {', '.join(tags)}")
+                    # Save tags to Supabase
+                    if save_image_metadata_to_supabase(image_url, tags):
+                        st.success("Tags saved successfully!")
+                else:
+                    st.error("Failed to generate tags using OpenAI.")
 
 # Weather Data ------------------------------------------
 with tab2:
