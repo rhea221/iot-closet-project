@@ -97,7 +97,7 @@ with tab1:
         file_extension = uploaded_file.name.split('.')[-1]
         unique_filename = generate_unique_filename(file_extension)
         image = Image.open(uploaded_file)
-        
+
         # Center and style the image with CSS
         st.markdown(
             """
@@ -113,7 +113,7 @@ with tab1:
             """,
             unsafe_allow_html=True
         )
-        
+
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.markdown('<div class="centered-image">', unsafe_allow_html=True)

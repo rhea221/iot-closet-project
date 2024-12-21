@@ -4,6 +4,7 @@ import os
 import uuid
 import json
 from datetime import datetime
+import openai
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
@@ -12,6 +13,7 @@ load_dotenv(dotenv_path="config/.env")
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(supabase_url, supabase_key)
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 if not supabase_url or not supabase_key:
     raise ValueError("Supabase credentials are missing. Check your .env file.")
@@ -68,6 +70,28 @@ def update_item_tags(image_url, new_tags):
     except Exception as e:
         raise Exception(f"Error updating tags: {e}")
 
+def generate_tags_with_openai(image_url):
+    """Generate tags for an image using OpenAI GPT."""
+    prompt = f"""
+    Analyze the following clothing item image and provide a list of tags based on the color, type, material, and pattern:
+    Image URL: {image_url}
+
+    Example tags: ["red", "tshirt", "cotton", "solid"]
+    """
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # Use gpt-4 or gpt-3.5-turbo
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant for analyzing clothing items."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+        )
+        tags = response['choices'][0]['message']['content'].strip()
+        return eval(tags)  # Convert string to list
+    except Exception as e:
+        raise Exception(f"Error generating tags with OpenAI: {e}")
+
 # Command-Line Interface (Optional)
 if __name__ == "__main__":
     import argparse
@@ -75,6 +99,7 @@ if __name__ == "__main__":
     parser.add_argument("--upload", help="Upload an image to Supabase", action="store_true")
     parser.add_argument("--view", help="View all closet items", action="store_true")
     parser.add_argument("--update", help="Update tags for an image", nargs=2, metavar=("URL", "TAGS"))
+    parser.add_argument("--generate-tags", help="Generate tags using OpenAI for an image", nargs=1, metavar="URL")
 
     args = parser.parse_args()
 
@@ -110,6 +135,16 @@ if __name__ == "__main__":
         try:
             if update_item_tags(image_url, new_tags):
                 print("Tags updated successfully.")
+        except Exception as e:
+            print(f"Error: {e}")
+
+    elif args.generate_tags:
+        image_url = args.generate_tags[0]
+        try:
+            tags = generate_tags_with_openai(image_url)
+            print(f"Generated Tags: {tags}")
+            save_image_metadata_to_supabase(image_url, ", ".join(tags))
+            print("Tags saved successfully.")
         except Exception as e:
             print(f"Error: {e}")
 
