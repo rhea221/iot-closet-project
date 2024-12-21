@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 import os
 import uuid
 from datetime import datetime, timezone
-import openai
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
@@ -17,8 +16,6 @@ load_dotenv(dotenv_path="config/.env")
 # Initialize Supabase
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
 if not supabase_url or not supabase_key:
     st.error("Supabase credentials are missing. Check your environment variables.")
     st.stop()
@@ -29,15 +26,15 @@ def generate_unique_filename(extension):
     """Generate a unique filename using UUID."""
     return f"{uuid.uuid4()}.{extension}"
 
-def upload_image_to_supabase(file_path, file_name):
-    """Upload an image to Supabase and return the public URL."""
+# My Closet --------------------------------------
+def upload_image_to_supabase(file, file_name):
+    """Upload image to Supabase and return the public URL."""
     try:
-        with open(file_path, "rb") as file:
-            response = supabase.storage.from_("closet-images").upload(file_name, file)
-            if not response.path:
-                raise Exception("Upload failed. No path returned.")
-            public_url = f"{supabase_url}/storage/v1/object/public/closet-images/{file_name}"
-            return public_url
+        response = supabase.storage.from_("closet-images").upload(file_name, file)
+        if not response.path:
+            raise Exception("Upload failed. No path returned.")
+        public_url = f"{supabase_url}/storage/v1/object/public/closet-images/{file_name}"
+        return public_url
     except Exception as e:
         st.error(f"Error uploading image: {e}")
         return None
@@ -47,7 +44,7 @@ def save_image_metadata_to_supabase(image_url, tags):
     try:
         data = {
             "image_url": image_url,
-            "tags": tags,  # Save tags as JSON
+            "tags": tags,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         # Insert data into Supabase table
@@ -64,28 +61,23 @@ def save_image_metadata_to_supabase(image_url, tags):
         st.error(f"Error saving metadata to Supabase: {e}")
         return False
 
-def generate_tags_with_openai(image_url):
-    """Generate tags for an image using OpenAI GPT."""
-    prompt = f"""
-    Analyze the following clothing item image and provide a list of tags based on the color, type, material, and pattern:
-    Image URL: {image_url}
-
-    Example tags: ["red", "tshirt", "cotton", "solid"]
-    """
+# Weather Data ------------------------------------------
+def fetch_weather_data():
+    """Fetch current weather data from the Supabase table."""
+    table_name = "weather-data"
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant for analyzing clothing items."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.7,
-        )
-        tags = response['choices'][0]['message']['content'].strip()
-        return eval(tags)  # Convert string to list
+        # Fetch the data from Supabase
+        response = supabase.table(table_name).select("*").execute()
+
+        # Check if the response contains data
+        if response.data:
+            return response.data
+        else:
+            st.warning("No weather data available in the table.")
+            return None
     except Exception as e:
-        st.error(f"Error generating tags with OpenAI: {e}")
-        return []
+        st.error(f"Error fetching data: {e}")
+        return None
 
 # Streamlit App ------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------
@@ -105,7 +97,7 @@ with tab1:
         file_extension = uploaded_file.name.split('.')[-1]
         unique_filename = generate_unique_filename(file_extension)
         image = Image.open(uploaded_file)
-
+        
         # Center and style the image with CSS
         st.markdown(
             """
@@ -121,38 +113,44 @@ with tab1:
             """,
             unsafe_allow_html=True
         )
-
+        
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.markdown('<div class="centered-image">', unsafe_allow_html=True)
-            st.image(image, caption="Uploaded Image", use_column_width=True)
+            st.image(image, caption="Uploaded Image", use_container_width=False, width=300, output_format="PNG", clamp=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # Save uploaded image to a temporary file for Supabase upload
-        temp_file_path = f"temp_{unique_filename}"
-        image.save(temp_file_path)
-
         # Upload to Supabase
-        if st.button("Upload and Analyze Image"):
-            image_url = upload_image_to_supabase(temp_file_path, unique_filename)
-            os.remove(temp_file_path)  # Remove the temporary file
+        if st.button("Upload Image"):
+            with open(unique_filename, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            image_url = upload_image_to_supabase(unique_filename, unique_filename)
             if image_url:
                 st.success(f"Image uploaded successfully: {image_url}")
                 st.session_state["image_url"] = image_url  # Save the URL in session state
 
-                # Generate tags using OpenAI
-                tags = generate_tags_with_openai(image_url)
-                if tags:
-                    st.success(f"Generated Tags: {', '.join(tags)}")
-                    # Display tags below the image
-                    st.markdown("**Generated Tags:**")
-                    st.write(tags)
+    # Check if image URL exists in session state
+    if "image_url" in st.session_state:
+        st.subheader("Add Tags to Your Item")
 
-                    # Save tags to Supabase
-                    if save_image_metadata_to_supabase(image_url, tags):
-                        st.success("Tags saved successfully!")
-                else:
-                    st.error("Failed to generate tags using OpenAI.")
+        # Dropdowns for tagging
+        color = st.selectbox("Select Color:", ["#red", "#blue", "#green", "#yellow", "#pink", "#black", "#white"], key="color")
+        type = st.selectbox("Select Type:", ["#tshirt", "#sweatshirt", "#jacket", "#pants", "#skirt", "#dress", "#shorts"], key="type")
+        material = st.selectbox("Select Material:", ["#cotton", "#denim", "#leather", "#wool", "#polyester"], key="material")
+        pattern = st.selectbox("Select Pattern:", ["#solid", "#striped", "#checked", "#polka-dot", "#floral"], key="pattern")
+
+        # Combine tags and show confirmation
+        tags = f"{color}, {type}, {material}, {pattern}"
+        st.text(f"Your tags: {tags}")
+
+        # Final confirmation to save
+        if st.button("Confirm and Save Tags"):
+            if save_image_metadata_to_supabase(st.session_state["image_url"], tags):
+                st.success("Tags saved successfully!")
+                # Clear session state after saving
+                del st.session_state["image_url"]
+            else:
+                st.error("Failed to save tags.")
 
 # Weather Data ------------------------------------------
 with tab2:
