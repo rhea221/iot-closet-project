@@ -9,16 +9,8 @@ from supabase import create_client, Client
 from datetime import datetime
 import requests
 
-# Load environment variables
-try:
-    env_path = os.path.abspath("config/.env")
-    if not os.path.exists(env_path):
-        raise FileNotFoundError(f".env file not found at {env_path}")
-    load_dotenv(dotenv_path=env_path)
-    print("Environment variables loaded from", env_path)
-except Exception as e:
-    st.error(f"Failed to load .env file: {e}")
-    st.stop()
+# Loading environment variables
+load_dotenv(dotenv_path="main/config/.env")
 
 # Supabase Data Storage ----------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------
