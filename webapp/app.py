@@ -10,7 +10,7 @@ from datetime import datetime
 import requests
 
 # Loading environment variables
-load_dotenv(dotenv_path="iot-closet-project/config/.env")
+load_dotenv(dotenv_path="config/.env")
 
 # Supabase Data Storage ----------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------
