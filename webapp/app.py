@@ -114,6 +114,8 @@ tab1, tab2 = st.tabs(["My Closet", "My Database"])
 # My Closet --------------------------------------
 with tab1:
     st.header("My Closet")
+    
+print("Running the updated app.py")
 
     # Image Upload
 uploaded_file = st.file_uploader("Upload an image of your clothing item", type=["jpg", "png", "jpeg"])
@@ -138,23 +140,23 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"Error: {e}")
 
-# Recommendation System
-if st.button("Get Outfit Recommendation"):
-    weather = fetch_weather()
-    events = fetch_events()
+# # Recommendation System
+# if st.button("Get Outfit Recommendation"):
+#     weather = fetch_weather()
+#     events = fetch_events()
 
-    st.write(f"Current Weather: {weather}")
-    st.write(f"Upcoming Events: {', '.join(events)}")
+#     st.write(f"Current Weather: {weather}")
+#     st.write(f"Upcoming Events: {', '.join(events)}")
 
-    # Fetch matching outfits
-    recommended = []  # Placeholder for recommendation logic
+#     # Fetch matching outfits
+#     recommended = []  # Placeholder for recommendation logic
 
-    if recommended:
-        st.write("Recommended Outfits:")
-        for item in recommended:
-            st.image(item['image_url'], caption=f"Tags: {', '.join(item['tags'])}")
-    else:
-        st.write("No matching outfits found.")
+#     if recommended:
+#         st.write("Recommended Outfits:")
+#         for item in recommended:
+#             st.image(item['image_url'], caption=f"Tags: {', '.join(item['tags'])}")
+#     else:
+#         st.write("No matching outfits found.")
 
 
 # Weather Data ------------------------------------------
