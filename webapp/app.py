@@ -37,17 +37,18 @@ def generate_unique_filename(extension: str) -> str:
     """Generate a unique filename using a UUID."""
     return f"{uuid.uuid4()}.{extension}"
 
-def upload_image_to_supabase(uploaded_file, file_name: str) -> str:
-    """Upload image to Supabase and return the public URL."""
+def upload_image_to_supabase(file, file_name: str) -> str:
+    """Upload an image from Streamlit UploadedFile to Supabase Storage and return the public URL."""
     try:
-        # Directly upload the Streamlit UploadedFile object
-        response = supabase.storage.from_("closet-images").upload(file_name, uploaded_file)
-        if not response.get("path"):
+        # Upload binary content of the file
+        response = supabase.storage.from_("closet-images").upload(file_name, file.read())
+        if not response or not response.get("path"):
             raise Exception("Upload failed. No path returned.")
         public_url = f"{supabase_url}/storage/v1/object/public/closet-images/{file_name}"
         return public_url
     except Exception as e:
-        raise Exception(f"Error uploading image: {e}")
+        raise Exception(f"Error uploading image to Supabase: {e}")
+
 
 
 
@@ -123,24 +124,28 @@ with tab1:
 uploaded_file = st.file_uploader("Upload an image of your clothing item", type=["jpg", "png", "jpeg"])
 if uploaded_file is not None:
     try:
-        # Upload the file and get the public URL
+        # Extract file name and extension dynamically
+        file_extension = uploaded_file.name.split(".")[-1]
+        file_name = generate_unique_filename(file_extension)
+
+        # Upload the file to Supabase
         st.write("Uploading image to Supabase...")
-        public_url = upload_image_to_supabase(uploaded_file, "jpg")
+        public_url = upload_image_to_supabase(uploaded_file, file_name)
         st.success(f"Image uploaded: {public_url}")
         st.image(public_url, caption="Uploaded Image", use_column_width=True)
 
-        # Generate tags using the public URL
+        # Generate tags using OpenAI
         st.write("Generating tags using OpenAI...")
         tags = get_image_tags(public_url)
         st.success(f"Generated Tags: {', '.join(tags)}")
 
-        # Save the clothing item
+        # Save clothing item to Supabase
         st.write("Saving clothing item to Supabase...")
         save_clothing_item(public_url, tags)
         st.success("Clothing item saved successfully!")
-
     except Exception as e:
         st.error(f"Error: {e}")
+
 
 # # Recommendation System
 # if st.button("Get Outfit Recommendation"):
