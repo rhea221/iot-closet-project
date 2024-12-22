@@ -37,17 +37,19 @@ def generate_unique_filename(extension: str) -> str:
     """Generate a unique filename using a UUID."""
     return f"{uuid.uuid4()}.{extension}"
 
-def upload_image_to_supabase(file, extension: str) -> str:
-    """Upload an image directly from a file-like object (Streamlit) to Supabase Storage and return the public URL."""
+def upload_image_to_supabase(uploaded_file, extension: str) -> str:
+    """Upload an image from a Streamlit UploadedFile to Supabase Storage and return the public URL."""
     try:
         filename = generate_unique_filename(extension)
-        response = supabase.storage.from_("closet-images").upload(filename, file)
+        # Use the file's binary content directly
+        response = supabase.storage.from_("closet-images").upload(filename, uploaded_file.read())
         if not response.get("path"):
             raise Exception("Failed to upload file.")
         public_url = supabase.storage.from_("closet-images").get_public_url(filename)
         return public_url
     except Exception as e:
         raise Exception(f"Error uploading image to Supabase: {e}")
+
 
 def get_image_tags(image_url: str) -> list:
     """Generate detailed tags for an image using OpenAI."""
