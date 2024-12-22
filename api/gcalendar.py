@@ -1,3 +1,5 @@
+# Handles Google Calendar API integration, to fetch upcoming events and upload to database
+
 import streamlit as st
 import requests
 import os

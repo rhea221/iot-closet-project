@@ -1,3 +1,5 @@
+# Handles OpenWeather API integration to fetch current weather data
+
 import streamlit as st
 import requests
 import os
