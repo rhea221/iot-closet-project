@@ -91,15 +91,15 @@ def get_image_tags(public_url: str) -> list:
 
 
 
-def save_clothing_item(image_url: str, tags: list) -> None:
-    """Save a clothing item with tags to Supabase."""
-    try:
-        supabase.table("clothing_items").insert({
-            "image_url": image_url,
-            "tags": tags
-        }).execute()
-    except Exception as e:
-        raise Exception(f"Error saving clothing item: {e}")
+# def save_clothing_item(image_url: str, tags: list) -> None:
+#     """Save a clothing item with tags to Supabase."""
+#     try:
+#         supabase.table("clothing_items").insert({
+#             "image_url": image_url,
+#             "tags": tags
+#         }).execute()
+#     except Exception as e:
+#         raise Exception(f"Error saving clothing item: {e}")
 
 # Weather Data ------------------------------------------
 # Fetching current weather data from the Supabase table
