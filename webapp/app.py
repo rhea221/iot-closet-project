@@ -59,7 +59,7 @@ def get_image_tags(image_url: str) -> list:
     try:
         # Construct the prompt as role-based messages
         messages = [
-            {"role": "system", "content": "You are an expert fashion stylist and clothing analyst."},
+            {"role": "system", "content": "Help me organise my closet items."},
             {
                 "role": "user",
                 "content": (
@@ -83,7 +83,7 @@ def get_image_tags(image_url: str) -> list:
             max_tokens=100,
             temperature=0.7,
         )
-        tags = response.choices[0].message["content"]
+        tags = response.choices[0].message.content
         return [tag.strip() for tag in tags.split(",") if tag.strip()]
     except Exception as e:
         raise Exception(f"Error generating image tags: {e}")
