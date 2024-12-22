@@ -40,10 +40,14 @@ def generate_unique_filename(extension: str) -> str:
 def upload_image_to_supabase(file, file_name: str) -> str:
     """Upload an image from Streamlit UploadedFile to Supabase Storage and return the public URL."""
     try:
-        # Upload binary content of the file
+        # Upload the binary content of the file
         response = supabase.storage.from_("closet-images").upload(file_name, file.read())
-        if not response or not response.get("path"):
+
+        # Check if the upload was successful
+        if not response or not hasattr(response, 'path') or not response.path:
             raise Exception("Upload failed. No path returned.")
+        
+        # Construct the public URL manually
         public_url = f"{supabase_url}/storage/v1/object/public/closet-images/{file_name}"
         return public_url
     except Exception as e:
