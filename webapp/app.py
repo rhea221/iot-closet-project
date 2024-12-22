@@ -54,7 +54,7 @@ def upload_image_to_supabase(file, file_name: str) -> str:
         raise Exception(f"Error uploading image to Supabase: {e}")
 
 
-def get_image_tags(image_url: str) -> list:
+def get_image_tags(public_url: str) -> list:
     """Generate detailed tags for an image using OpenAI."""
     try:
         # Construct the prompt as role-based messages
@@ -63,7 +63,7 @@ def get_image_tags(image_url: str) -> list:
             {
                 "role": "user",
                 "content": (
-                    f"Analyze this clothing item image available at {image_url}. "
+                    f"Analyze this clothing item image available at this URL: {public_url}. "
                     "Describe it in terms of the following attributes:\n"
                     "1. Material (e.g., cotton, polyester).\n"
                     "2. Clothing category (e.g., shirt, pants, jacket).\n"
