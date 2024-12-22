@@ -114,8 +114,8 @@ tab1, tab2 = st.tabs(["My Closet", "My Database"])
 # My Closet --------------------------------------
 with tab1:
     st.header("My Closet")
-    
-print("Running the updated app.py")
+
+    print("Running the updated app.py")
 
     # Image Upload
 uploaded_file = st.file_uploader("Upload an image of your clothing item", type=["jpg", "png", "jpeg"])
