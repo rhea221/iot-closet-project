@@ -57,7 +57,7 @@ def upload_image_to_supabase(file, file_name: str) -> str:
 def get_image_tags(image_url: str) -> list:
     """Generate detailed tags for an image using OpenAI."""
     try:
-        # Updated API for OpenAI GPT models
+        # Construct the prompt as role-based messages
         messages = [
             {"role": "system", "content": "You are an expert fashion stylist and clothing analyst."},
             {
@@ -75,16 +75,19 @@ def get_image_tags(image_url: str) -> list:
             },
         ]
 
-        response = openai.ChatCompletion.create(
-            model="gpt-4",  # Replace with "gpt-3.5-turbo" if using GPT-3.5
+        # Call OpenAI API with updated syntax
+        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-4",  # Use "gpt-3.5-turbo" if gpt-4 is unavailable
             messages=messages,
-            temperature=0.7,
             max_tokens=100,
+            temperature=0.7,
         )
         tags = response.choices[0].message["content"]
         return [tag.strip() for tag in tags.split(",") if tag.strip()]
     except Exception as e:
         raise Exception(f"Error generating image tags: {e}")
+
 
 
 
