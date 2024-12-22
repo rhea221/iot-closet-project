@@ -46,9 +46,12 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
     # Format weather data
     weather_context = f"The current temperature is {weather['temp']}°C with {weather['weather']}."
 
-    # Format remaining events
+    # Format remaining events with fallback for missing keys
     if remaining_events:
-        event_context = " ".join([f"{event['title']} at {event['location']}" for event in remaining_events])
+        event_context = " ".join([
+            f"{event.get('title', 'Untitled Event')} at {event.get('location', 'No location specified')}"
+            for event in remaining_events
+        ])
     else:
         event_context = "There are no remaining events for the day."
 
@@ -74,17 +77,22 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
     # Call OpenAI API
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-4",  # Use gpt-3.5-turbo if gpt-4 is unavailable
+            model="gpt-4",  # Replace with gpt-3.5-turbo if gpt-4 access is unavailable
             messages=[
                 {"role": "system", "content": "You are a fashion stylist and clothing analyst."},
                 {"role": "user", "content": prompt},
-            ],
-            max_tokens=300,
-            temperature=0.7,
+            ]
         )
-        return response["choices"][0]["message"]["content"]
+        # Extract and return content from response
+        return response.choices[0].message.content
     except Exception as e:
-        raise Exception(f"Error generating clothing recommendation: {e}")
+        raise Exception(f"Error generating clothing recommendation: {str(e)}")
+
+
+
+
+
+
 
 # Main Logic
 def main():
