@@ -1,11 +1,9 @@
-# Logic for outfit recommendations, interacting with uploaded database
-
+import openai
 from supabase import create_client, Client
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 from dateutil import parser
 import os
-import random
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
@@ -13,173 +11,103 @@ load_dotenv(dotenv_path="config/.env")
 # Initialize Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise Exception("Supabase credentials are missing. Check your environment variables.")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not SUPABASE_URL or not SUPABASE_KEY or not OPENAI_API_KEY:
+    raise Exception("Supabase or OpenAI credentials are missing. Check your environment variables.")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+openai.api_key = OPENAI_API_KEY
 
-# Define keywords for event classification
-EVENT_CATEGORIES = {
-    "University": {
-        "title_keywords": [],
-        "location_keywords": ["Dyson Building"]
-    },
-    "Meeting": {
-        "title_keywords": ["Meeting"],
-        "location_keywords": []
-    },
-    "Fitness": {
-        "title_keywords": ["Gym", "Bouldering"],
-        "location_keywords": []
-    },
-    "Dining": {
-        "title_keywords": ["Brunch", "Lunch", "Dinner"],
-        "location_keywords": []
-    },
-    "Leisure": {
-        "title_keywords": ["Musical", "Movie", "Museum", "Crafts"],
-        "location_keywords": []
-    },
-    "Social Event": {
-        "title_keywords": ["Clubbing", "Party", "Games"],
-        "location_keywords": []
-    },
-    "Appointments": {
-        "title_keywords": ["Appointment"],
-        "location_keywords": []
-    }
-}
-
-def classify_event(event):
-    """Classify an event based on its title and location."""
-    event_title = event.get("title", "").lower()
-    event_location = event.get("location", "").lower()
-
-    for category, keywords in EVENT_CATEGORIES.items():
-        for keyword in keywords["title_keywords"]:
-            if keyword.lower() in event_title:
-                return category
-        for keyword in keywords["location_keywords"]:
-            if keyword.lower() in event_location:
-                return category
-
-    return "Uncategorized"
-
-def fetch_events():
-    """Fetch events stored in the Supabase calendar-events table."""
-    response = supabase.table("calendar-events").select("*").execute()
-    return response.data or []
-
+# Fetch Data from Supabase
 def fetch_weather():
     """Fetch the most recent weather data from Supabase."""
     response = supabase.table("weather-data").select("*").order("created_at", desc=True).limit(1).execute()
     return response.data[0] if response.data else None
 
-def fetch_outfit_items():
-    """Fetch clothing items stored in the Supabase closet-items table."""
-    response = supabase.table("closet-items").select("*").execute()
-    return response.data or []
-
-def match_clothing(tags, clothing_items):
-    """
-    Match clothing items to the given tags.
-    Returns a random match if multiple items fit.
-    """
-    matched_items = [item for item in clothing_items if all(tag in item["tags"] for tag in tags)]
-    return random.choice(matched_items) if matched_items else None
-
-def recommend_outfits():
-    """Generate outfit recommendations by matching clothing items (including shoes) to weather and events."""
-    events = fetch_events()
-    weather = fetch_weather()
-    outfit_items = fetch_outfit_items()
+def fetch_remaining_events():
+    """Fetch remaining calendar events for the day from Supabase."""
     now = datetime.now(timezone.utc)
-
-    if not events:
-        return {"recommendation": "No events for the rest of the day."}
-
-    # Filter events to only include those happening after the current time
+    response = supabase.table("calendar-events").select("*").execute()
+    events = response.data or []
+    # Filter for events occurring later today
     remaining_events = [
         event for event in events
         if parser.isoparse(event["start_time"]).replace(tzinfo=timezone.utc) > now
     ]
+    return remaining_events
 
-    if not remaining_events:
-        return {"recommendation": "No remaining events for today."}
+def fetch_clothing_items():
+    """Fetch clothing items stored in the Supabase closet-items table."""
+    response = supabase.table("closet-items").select("*").execute()
+    return response.data or []
 
-    # Count the frequency of each event category
-    category_counts = {}
-    for event in remaining_events:
-        category = classify_event(event)
-        if category in category_counts:
-            category_counts[category] += 1
-        else:
-            category_counts[category] = 1
+# OpenAI Recommendation Logic
+def recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags):
+    """Use OpenAI to recommend clothing items based on weather, events, and available tags."""
+    # Format weather data
+    weather_context = f"The current temperature is {weather['temp']}°C with {weather['weather']}."
 
-    # Determine the dominant event category
-    dominant_category = max(category_counts, key=category_counts.get)
-
-    # Weather data
-    avg_temp = weather["temp"]
-    weather_description = weather["weather"]
-
-    # Select tags based on dominant category and weather
-    tags = []
-    if dominant_category == "Fitness":
-        tags = ["#athletic"]
-    elif dominant_category == "Meeting":
-        tags = ["#formal"]
-    elif dominant_category == "Dining":
-        tags = ["#smart-casual"]
-    elif dominant_category == "University":
-        tags = ["#casual"]
-    elif dominant_category == "Leisure":
-        tags = ["#comfortable"]
-    elif dominant_category == "Social Event":
-        tags = ["#dressy"]
+    # Format remaining events
+    if remaining_events:
+        event_context = " ".join([f"{event['title']} at {event['location']}" for event in remaining_events])
     else:
-        tags = ["#neutral"]
+        event_context = "There are no remaining events for the day."
 
-    # Adjust tags based on weather
-    if avg_temp < 10:
-        tags.append("#warm")
-    elif avg_temp > 25:
-        tags.append("#light")
-    if "rain" in weather_description:
-        tags.append("#waterproof")
+    # Format available tags
+    tags_context = f"Available tags are: {', '.join(available_tags)}."
 
-    # Match clothing items
-    top = match_clothing(tags + ["#tshirt", "#sweatshirt"], outfit_items)
-    jacket = match_clothing(tags + ["#jacket"], outfit_items)
-    bottom = match_clothing(tags + ["#pants", "#skirt", "#shorts"], outfit_items)
-    shoes = match_clothing(tags + ["#shoes"], outfit_items)
+    # Format clothing items
+    clothing_context = "\n".join([
+        f"Clothing Item {i+1}: {item['tags']} (Image: {item['image_url']})"
+        for i, item in enumerate(clothing_items)
+    ])
 
-    # Generate the outfit recommendation
-    recommendation = {
-        "top": top["image_url"] if top else "No matching top found",
-        "jacket": jacket["image_url"] if jacket else "No matching jacket found",
-        "bottom": bottom["image_url"] if bottom else "No matching bottom found",
-        "shoes": shoes["image_url"] if shoes else "No matching shoes found",
-        "details": {
-            "tags": tags,
-            "events_considered": len(remaining_events),
-            "dominant_category": dominant_category,
-            "weather": {
-                "temp": avg_temp,
-                "description": weather_description,
-            }
-        }
-    }
+    # Create prompt for OpenAI
+    prompt = (
+        f"Based on the following information, recommend a top and a bottom clothing item:\n"
+        f"- Weather: {weather_context}\n"
+        f"- Events: {event_context}\n"
+        f"- Tags: {tags_context}\n"
+        f"- Clothing Items:\n{clothing_context}\n\n"
+        f"Select a top and a bottom clothing item from the list and provide a short justification for your choices."
+    )
 
-    return recommendation
+    # Call OpenAI API
+    try:
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # Use gpt-3.5-turbo if gpt-4 is unavailable
+            messages=[
+                {"role": "system", "content": "You are a fashion stylist and clothing analyst."},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=300,
+            temperature=0.7,
+        )
+        return response["choices"][0]["message"]["content"]
+    except Exception as e:
+        raise Exception(f"Error generating clothing recommendation: {e}")
+
+# Main Logic
+def main():
+    weather = fetch_weather()
+    remaining_events = fetch_remaining_events()
+    clothing_items = fetch_clothing_items()
+
+    if not weather or not clothing_items:
+        print("Insufficient data for recommendation.")
+        return
+
+    # Define available tags (from app.py dropdowns)
+    available_tags = [
+        "#red", "#blue", "#green", "#yellow", "#pink", "#black", "#white",
+        "#tshirt", "#sweatshirt", "#jacket", "#pants", "#skirt", "#dress", "#shorts",
+        "#cotton", "#denim", "#leather", "#wool", "#polyester",
+        "#solid", "#striped", "#checked", "#polka-dot", "#floral"
+    ]
+
+    # Generate recommendation
+    recommendation = recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags)
+    print("Recommendation:")
+    print(recommendation)
 
 if __name__ == "__main__":
-    result = recommend_outfits()
-    print("Outfit Recommendation:")
-    print(f"Top: {result['top']}")
-    print(f"Jacket: {result['jacket']}")
-    print(f"Bottom: {result['bottom']}")
-    print(f"Shoes: {result['shoes']}")
-    print("Details:")
-    print(result["details"])
-
-
+    main()
