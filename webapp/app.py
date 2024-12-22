@@ -58,27 +58,34 @@ def get_image_tags(image_url: str) -> list:
     """Generate detailed tags for an image using OpenAI."""
     try:
         # Updated API for OpenAI GPT models
-        prompt = (
-            f"Analyze this clothing item image available at {image_url}. "
-            "Describe it in terms of the following attributes:\n"
-            "1. Material (e.g., cotton, polyester).\n"
-            "2. Clothing category (e.g., shirt, pants, jacket).\n"
-            "3. Style (e.g., casual, formal, sporty).\n"
-            "4. Weather suitability (e.g., suitable for hot, cold, rainy).\n"
-            "5. Event suitability (e.g., office, party, workout).\n"
-            "Return a list of tags representing these attributes."
-        )
+        messages = [
+            {"role": "system", "content": "You are an expert fashion stylist and clothing analyst."},
+            {
+                "role": "user",
+                "content": (
+                    f"Analyze this clothing item image available at {image_url}. "
+                    "Describe it in terms of the following attributes:\n"
+                    "1. Material (e.g., cotton, polyester).\n"
+                    "2. Clothing category (e.g., shirt, pants, jacket).\n"
+                    "3. Style (e.g., casual, formal, sporty).\n"
+                    "4. Weather suitability (e.g., suitable for hot, cold, rainy).\n"
+                    "5. Event suitability (e.g., office, party, workout).\n"
+                    "Return a list of tags representing these attributes."
+                ),
+            },
+        ]
 
-        response = openai.Completion.create(
-            model="gpt-4",  # Adjust model name if necessary
-            prompt=prompt,
+        response = openai.ChatCompletion.create(
+            model="gpt-4",  # Replace with "gpt-3.5-turbo" if using GPT-3.5
+            messages=messages,
+            temperature=0.7,
             max_tokens=100,
-            temperature=0.7
         )
-        tags = response['choices'][0]['text']
+        tags = response.choices[0].message["content"]
         return [tag.strip() for tag in tags.split(",") if tag.strip()]
     except Exception as e:
         raise Exception(f"Error generating image tags: {e}")
+
 
 
 def save_clothing_item(image_url: str, tags: list) -> None:
