@@ -54,14 +54,10 @@ def upload_image_to_supabase(file, file_name: str) -> str:
         raise Exception(f"Error uploading image to Supabase: {e}")
 
 
-
-
-
-
 def get_image_tags(image_url: str) -> list:
     """Generate detailed tags for an image using OpenAI."""
     try:
-        # Prompt for GPT-based tagging
+        # Updated API for OpenAI GPT models
         prompt = (
             f"Analyze this clothing item image available at {image_url}. "
             "Describe it in terms of the following attributes:\n"
@@ -73,17 +69,17 @@ def get_image_tags(image_url: str) -> list:
             "Return a list of tags representing these attributes."
         )
 
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are an expert fashion stylist and clothing analyst."},
-                {"role": "user", "content": prompt},
-            ]
+        response = openai.Completion.create(
+            model="gpt-4",  # Adjust model name if necessary
+            prompt=prompt,
+            max_tokens=100,
+            temperature=0.7
         )
-        tags = response['choices'][0]['message']['content']
+        tags = response['choices'][0]['text']
         return [tag.strip() for tag in tags.split(",") if tag.strip()]
     except Exception as e:
         raise Exception(f"Error generating image tags: {e}")
+
 
 def save_clothing_item(image_url: str, tags: list) -> None:
     """Save a clothing item with tags to Supabase."""
@@ -136,7 +132,7 @@ if uploaded_file is not None:
         st.write("Uploading image to Supabase...")
         public_url = upload_image_to_supabase(uploaded_file, file_name)
         st.success(f"Image uploaded: {public_url}")
-        st.image(public_url, caption="Uploaded Image", use_column_width=True)
+        st.image(public_url, caption="Uploaded Image", use_container_width=True)
 
         # Generate tags using OpenAI
         st.write("Generating tags using OpenAI...")
