@@ -41,7 +41,7 @@ def upload_image_to_supabase(uploaded_file, extension: str) -> str:
     """Upload an image from a Streamlit UploadedFile to Supabase Storage and return the public URL."""
     try:
         filename = generate_unique_filename(extension)
-        # Use the file's binary content directly
+        # Pass file's binary content directly
         response = supabase.storage.from_("closet-images").upload(filename, uploaded_file.read())
         if not response.get("path"):
             raise Exception("Failed to upload file.")
@@ -49,6 +49,8 @@ def upload_image_to_supabase(uploaded_file, extension: str) -> str:
         return public_url
     except Exception as e:
         raise Exception(f"Error uploading image to Supabase: {e}")
+
+
 
 
 def get_image_tags(image_url: str) -> list:
