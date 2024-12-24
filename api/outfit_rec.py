@@ -110,15 +110,15 @@ def calculate_average_event_time(events):
     return avg_time
 
 def get_images_from_recommendation(recommendations, clothing_items):
-    """Retrieve images for recommended items based on tags."""
     selected_items = []
     for recommendation in recommendations:
         tags = recommendation.get("tags", "").split(", ")
         for item in clothing_items:
-            if isinstance(item["tags"], list):  # Ensure tags are lists
-                if any(tag.strip() in item["tags"] for tag in tags):
-                    selected_items.append({"image_url": item["image_url"], "tags": item["tags"]})
+            item_tags = item["tags"]  # Ensure item["tags"] is a list
+            if any(tag in item_tags for tag in tags):
+                selected_items.append(item["image_url"])
     return selected_items
+
 
 
 
