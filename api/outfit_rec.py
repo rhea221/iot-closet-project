@@ -11,12 +11,11 @@ load_dotenv(dotenv_path="config/.env")
 # Initialize Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-if not SUPABASE_URL or not SUPABASE_KEY or not OPENAI_API_KEY:
+if not SUPABASE_URL or not SUPABASE_KEY or not openai.api_key:
     raise Exception("Supabase or OpenAI credentials are missing. Check your environment variables.")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-openai.api_key = OPENAI_API_KEY
 
 # Fetch Data from Supabase
 def fetch_weather():
@@ -175,6 +174,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
             temperature=0.7,
         )
         # Extract and return content from response
+        print("OpenAI API Response:", response)
         return response.choices[0].message.content
     except Exception as e:
         raise Exception(f"Error generating clothing recommendation: {str(e)}")
