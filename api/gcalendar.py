@@ -58,7 +58,6 @@ def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
             "title": event.get("summary", "No Title"),
             "start_time": event["start"].get("dateTime", event["start"].get("date")),
             "location": event.get("location", "Unknown"),
-            "description": event.get("description", "No Description"),
             "duration": calculate_duration(event.get("start"), event.get("end"))
         }
         event_details.append(details)
@@ -98,7 +97,6 @@ def save_events_to_supabase(events):
                 "title": event["title"],
                 "start_time": event["start_time"],
                 "location": event["location"],
-                "description": event["description"],
                 "duration": event["duration"],
                 "created_at": datetime.now(pytz.UTC).isoformat()
             }).execute()
