@@ -250,19 +250,5 @@ def main():
         return None, None
 
 
-# Generate recommendation
-    try:
-        recommendations = recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags)
-        recommendations = json.loads(response_content)
-        if not isinstance(recommendations, list):
-            raise ValueError("Invalid recommendation format. Expected a list of dictionaries.")
-
-        outfit_images = get_images_from_recommendation(recommendations, clothing_items)
-        print("Recommendations:", recommendations)
-        print("Outfit Images:", outfit_images)
-        return recommendations, outfit_images
-    except Exception as e:
-        print(f"Error generating recommendation: {e}")
-
 if __name__ == "__main__":
     main()
