@@ -56,7 +56,7 @@ def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
     event_details = []
     for event in events:
         details = {
-            "google-event-id": event.get("id", ""),
+            "google-event-id": event.get("google-event-id"),
             "title": event.get("summary", "No Title"),
             "start_time": event["start"].get("dateTime", event["start"].get("date")),
             "location": event.get("location", "Unknown"),
@@ -86,8 +86,8 @@ def fetch_existing_events():
 
 def filter_new_events(events, existing_events):
     """Filter out events that are already in the database."""
-    existing_event_ids = {event["id"] for event in existing_events}  # Assuming each event has a unique 'id' field
-    return [event for event in events if event["id"] not in existing_event_ids]
+    existing_event_ids = {event["google-event-id"] for event in existing_events}  # Assuming each event has a unique 'id' field
+    return [event for event in events if event["google-event-id"] not in existing_event_ids]
 
 def save_events_to_supabase(events):
     """Save today's events to the Supabase database."""
@@ -96,7 +96,7 @@ def save_events_to_supabase(events):
         for event in events:
             # Insert each event into the Supabase table
             supabase.table(table_name).insert({
-                "google-event-id": event["id"],
+                "google-event-id": event["google-event-id"],
                 "title": event["title"],
                 "start_time": event["start_time"],
                 "location": event["location"],
