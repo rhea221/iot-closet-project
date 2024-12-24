@@ -45,11 +45,13 @@ def fetch_clothing_items():
     for item in clothing_items:
         if isinstance(item.get("tags"), str):
             try:
-                item["tags"] = json.loads(item["tags"])  # Parse JSON strings to lists
+                # Convert JSON string to a Python list
+                item["tags"] = json.loads(item["tags"])
             except json.JSONDecodeError:
                 item["tags"] = []  # Default to empty list if parsing fails
 
     return clothing_items
+
 
 
 def calculate_dominant_event_category(events):
@@ -113,10 +115,11 @@ def get_images_from_recommendation(recommendations, clothing_items):
     for recommendation in recommendations:
         tags = recommendation.get("tags", "").split(", ")
         for item in clothing_items:
-            item_tags = item["tags"].split(", ")
-            if any(tag in item_tags for tag in tags):
-                selected_items.append(item["image_url"])
+            if isinstance(item["tags"], list):  # Ensure tags are lists
+                if any(tag.strip() in item["tags"] for tag in tags):
+                    selected_items.append({"image_url": item["image_url"], "tags": item["tags"]})
     return selected_items
+
 
 
 # OpenAI Recommendation Logic
@@ -180,11 +183,8 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
         f"- {avg_event_time_context}\n"
         f"- Tags: {tags_context}\n"
         f"- Clothing Items:\n{clothing_context}\n\n"
-        f"Provide the output strictly in this JSON format (no extra text):\n"
-        f"["
-        f"  {{\"tags\": \"[tag], [tag], [tag]\", \"image_url\": \"https://example.com/image1.jpg\"}},"
-        f"  {{\"tags\": \"[tag], [tag], [tag]\", \"image_url\": \"https://example.com/image2.jpg\"}}"
-        f"]"
+        f"Provide the response strictly in this JSON format:\n"
+        f"[{{\"tags\": \"[tag1], [tag2]\", \"image_url\": \"https://example.com/image1.jpg\"}}]"
     )
     # maybe for streamlit provide justification, display, don't
 
@@ -199,21 +199,13 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
             max_tokens=150,
             temperature=0.7,
         )
-        # Extract and return content from response
-        response_content = response['choices'][0]['message']['content']
-        print("OpenAI Response:", response_content)
-
-        recommendations = json.loads(response_content)  # Parse JSON response
-        if not isinstance(recommendations, list):
-            raise ValueError("Invalid recommendation format. Expected a list.")
-
+        response_content = response.choices[0].message.content.strip()
+        recommendations = json.loads(response_content)
         return recommendations
     except json.JSONDecodeError as e:
-        print("Error decoding JSON:", e)
-        raise Exception(f"Error parsing OpenAI response: {str(e)}")
+        raise Exception(f"Failed to parse OpenAI response: {e}")
     except Exception as e:
-        print("Error calling OpenAI:", e)
-        raise Exception(f"Error generating clothing recommendation: {str(e)}")
+        raise Exception(f"Error generating recommendation: {e}")
     
 # Main Logic
 def main():

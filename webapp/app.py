@@ -95,6 +95,7 @@ st.title("IoT Closet Manager")
 tab1, tab2, tab3 = st.tabs(["Recommendations", "My Closet", "My Database"])
 
 # Recommendations --------------------------------
+# Recommendations --------------------------------
 with tab1:
     st.header("Recommendations")
 
@@ -108,12 +109,13 @@ with tab1:
                     st.success("Recommendation Generated!")
                     st.subheader("Your Outfit Recommendation:")
                     
-                    for item in recommendations:
-                        st.image(item["image_url"], caption=", ".join(item["tags"].split(", ")), use_column_width=True)
+                    for item in outfit_images:
+                        st.image(item["image_url"], caption=", ".join(item["tags"]), use_column_width=True)
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:
                 st.error(f"Error generating recommendation: {e}")
+
 
 # My Closet --------------------------------------
 with tab2:
