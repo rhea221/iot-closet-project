@@ -102,16 +102,14 @@ with tab1:
     if st.button("Get Outfit Recommendation"):
         with st.spinner("Fetching recommendation..."):
             try:
-                # Run outfit_rec.py logic and fetch the recommendation
-                from api.outfit_rec import main as fetch_recommendation
-                recommendation = fetch_recommendation()
-                
-                if recommendation:
+                recommendations, outfit_images = fetch_recommendation()
+
+                if recommendations:
                     st.success("Recommendation Generated!")
                     st.subheader("Your Outfit Recommendation:")
-                    for item in recommendation:
-                        st.image(item["image_url"], caption=item["tags"], use_column_width=True)
-                
+                    
+                    for item in recommendations:
+                        st.image(item["image_url"], caption=", ".join(item["tags"].split(", ")), use_column_width=True)
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:

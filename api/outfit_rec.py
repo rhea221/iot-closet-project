@@ -39,7 +39,18 @@ def fetch_remaining_events():
 def fetch_clothing_items():
     """Fetch clothing items stored in the Supabase closet-items table."""
     response = supabase.table("closet-items").select("*").execute()
-    return response.data or []
+    clothing_items = response.data or []
+
+    # Ensure tags are parsed into Python lists
+    for item in clothing_items:
+        if isinstance(item.get("tags"), str):
+            try:
+                item["tags"] = json.loads(item["tags"])  # Parse JSON strings to lists
+            except json.JSONDecodeError:
+                item["tags"] = []  # Default to empty list if parsing fails
+
+    return clothing_items
+
 
 def calculate_dominant_event_category(events):
     """Determine the dominant category of events."""
@@ -233,6 +244,10 @@ def main():
 # Generate recommendation
     try:
         recommendations = recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags)
+        recommendations = json.loads(response_content)
+        if not isinstance(recommendations, list):
+            raise ValueError("Invalid recommendation format. Expected a list of dictionaries.")
+
         outfit_images = get_images_from_recommendation(recommendations, clothing_items)
         print("Recommendations:", recommendations)
         print("Outfit Images:", outfit_images)
