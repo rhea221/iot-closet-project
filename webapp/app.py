@@ -8,7 +8,9 @@ import uuid
 from datetime import datetime, timezone
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), 'api'))
+# Add the project root to sys.path
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from api.outfit_rec import main as fetch_recommendation
 
 # Load environment variables
