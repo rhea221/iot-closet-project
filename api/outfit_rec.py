@@ -54,20 +54,23 @@ def calculate_dominant_event_category(events):
     }
 
     university_locations = ["Dyson Building", "Library", "Imperial College Londong"]
-
+    
     category_count = {key: 0 for key in categories}
+    sports_priority = False  # Track if sports events should take priority
+
     for event in events:
         title = event.get("title", "").lower()
-        location = event.get("location", "").lower()
+        location = str(event.get("location", "")).lower()  # Ensure location is a string
 
-        if any (loc.lower() in location for loc in university_locations):
-            category_count["university"] +=1
-            
+        if any(loc.lower() in location for loc in university_locations):
+            category_count["university"] += 1
+
         for category, keywords in categories.items():
             if any(keyword in title for keyword in keywords):
                 category_count[category] += 1
                 if category == "sport":
                     sports_priority = True  # Mark if a sports event is present
+
 
     # Prioritize sports category
     if sports_priority:
@@ -129,12 +132,12 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
 
     event_context = " ".join([
             f"{event.get('title', 'Untitled Event')} at {event.get('location', 'No location specified')}"
+            f"({event.get('duration', 'Unknown')} hrs)"
             for event in remaining_events
     ])
     avg_event_time_context = (
         f"The average event time is {avg_event_time.strftime('%H:%M %p')} UTC." if avg_event_time else ""
     )
-
 
     # if remaining_events
     tags_context = f"Available tags are: {', '.join(available_tags)}."
@@ -156,7 +159,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
         f"- Clothing Items:\n{clothing_context}\n\n"
         f"Provide the answer in this format, with no labels, headings, tags:\n"
         f"Temperature and weather description.\n"
-        f"For your 'event', I recommend: list of clothes ('top, bottom, shoes, jacket')"
+        f"For today, I recommend: list of clothes ('top, bottom, shoes, jacket')"
     )
     # maybe for streamlit provide justification, display, don't
 
