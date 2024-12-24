@@ -105,13 +105,18 @@ with tab1:
                 # Run outfit_rec.py logic and fetch the recommendation
                 from api.outfit_rec import main as fetch_recommendation
                 recommendation = fetch_recommendation()
+                
                 if recommendation:
-                    st.text_area(label="Outfit Recommendation:", value=recommendation, height=200)
+                    st.success("Recommendation Generated!")
+                    st.subheader("Your Outfit Recommendation:")
+                    for item in recommendation:
+                        st.image(item["image_url"], caption=item["tags"], use_column_width=True)
+                
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:
                 st.error(f"Error generating recommendation: {e}")
-                
+
 # My Closet --------------------------------------
 with tab2:
     st.header("My Closet")

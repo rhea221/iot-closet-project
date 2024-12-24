@@ -95,6 +95,16 @@ def calculate_average_event_time(events):
     avg_time = datetime.fromtimestamp(avg_timestamp, tz=timezone.utc)
     return avg_time
 
+def get_images_from_recommendation(recommendation, clothing_items):
+    """Retrieve images for recommended items based on tags."""
+    recommended_tags = [tag.strip() for tag in recommendation.split(",")]
+    selected_items = []
+    for item in clothing_items:
+        item_tags = item["tags"].split(", ")
+        if any(tag in item_tags for tag in recommended_tags):
+            selected_items.append(item["image_url"])
+    return selected_items
+
 # OpenAI Recommendation Logic
 def recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags):
     """Use OpenAI to recommend clothing items based on weather, events, and available tags."""
@@ -158,7 +168,8 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
         f"- Clothing Items:\n{clothing_context}\n\n"
         f"Provide the answer in this format, with no labels, headings, tags:\n"
         f"Temperature and weather description.\n"
-        f"For today, I recommend: list of clothes ('top, bottom, shoes, jacket')"
+        f"I see you have (events) today.\n"
+        f"I recommend wearing: list of clothes ('top, bottom, shoes, jacket')"
     )
     # maybe for streamlit provide justification, display, don't
 
@@ -212,7 +223,8 @@ def main():
 
     # Generate recommendation
     recommendation = recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags)
-    return recommendation
+    outfit_images = get_images_from_recommendation(recommendation, clothing_items)
+    return recommendation, outfit_images
 
 if __name__ == "__main__":
     main()
