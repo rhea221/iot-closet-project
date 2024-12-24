@@ -200,14 +200,19 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
             temperature=0.7,
         )
         # Extract and return content from response
-        response_content = response.choices[0].message.content
-        recommendations = json.loads(response_content)  # Ensure it parses as JSON
+        response_content = response['choices'][0]['message']['content']
+        print("OpenAI Response:", response_content)
+
+        recommendations = json.loads(response_content)  # Parse JSON response
         if not isinstance(recommendations, list):
-            raise ValueError("Invalid recommendation format. Expected a list of dictionaries.")
+            raise ValueError("Invalid recommendation format. Expected a list.")
+
         return recommendations
     except json.JSONDecodeError as e:
+        print("Error decoding JSON:", e)
         raise Exception(f"Error parsing OpenAI response: {str(e)}")
     except Exception as e:
+        print("Error calling OpenAI:", e)
         raise Exception(f"Error generating clothing recommendation: {str(e)}")
     
 # Main Logic
@@ -216,30 +221,42 @@ def main():
     remaining_events = fetch_remaining_events()
     clothing_items = fetch_clothing_items()
 
-    if not weather or not clothing_items:
-        print("Insufficient data for recommendation.")
+    if not weather:
+        print("Weather data is missing.")
+        return
+    if not clothing_items:
+        print("No clothing items available.")
         return
 
-    # Define available tags (from app.py dropdowns)
-    available_tags = [
-    # Colors
-    "🔴 Red", "🔵 Blue", "🟢 Green", "🟤 Brown", "🩷 Pink", "⚫ Black", "⚪ White", "💜 Purple", "🟡 Yellow", "🟠 Orange", "⚪ Silver",
-    
-    # Types
-    "👕 T-shirt", "👚 Sweatshirt", "🧥 Hoodie", "🧣 Sweater", "🧣 Cardigan", "🧥 Jacket", "🧥 Puffer", "👖 Trousers", "👖 Jeans", "👖 Joggers", "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt", "👟 Sneakers", "👢 Boots",
-    
-    # Materials
-    "🧵 Cotton", "👖 Denim", "👜 Leather", "🧶 Wool", "🧵 Polyester", "🎾 Mesh", "Suede",
-    
-    # Patterns
-    "⬛ Solid", "➖ Striped", "🏁 Checked", "🟫 Camo", "🌸 Festive",
-    
-    # Styles
-    "🎽 Casual", "🕶 Streetwear", "👟 Sporty", "🤵 Formal", "🎉 Party", "💼 Work",
-    
-    # Fits
-    "🤏 Slim Fit", "📦 Baggy", "🎯 Regular Fit"
-]
+    try:
+        available_tags = [
+            "🔴 Red", "🔵 Blue", "🟢 Green", "🟤 Brown", "🩷 Pink", "⚫ Black", "⚪ White",
+            "💜 Purple", "🟡 Yellow", "🟠 Orange", "⚪ Silver",
+            "👕 T-shirt", "👚 Sweatshirt", "🧥 Hoodie", "🧣 Sweater", "🧣 Cardigan",
+            "🧥 Jacket", "🧥 Puffer", "👖 Trousers", "👖 Jeans", "👖 Joggers",
+            "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt", "👟 Sneakers", "👢 Boots",
+            "🧵 Cotton", "👖 Denim", "👜 Leather", "🧶 Wool", "🧵 Polyester", "🎾 Mesh",
+            "⬛ Solid", "➖ Striped", "🏁 Checked", "🟫 Camo", "🌸 Festive",
+            "🎽 Casual", "🕶 Streetwear", "👟 Sporty", "🤵 Formal", "🎉 Party", "💼 Work",
+            "🤏 Slim Fit", "📦 Baggy", "🎯 Regular Fit",
+        ]
+
+        recommendations = recommend_clothing_with_openai(
+            weather, remaining_events, clothing_items, available_tags
+        )
+
+        if recommendations:
+            outfit_images = get_images_from_recommendation(recommendations, clothing_items)
+            print("Recommendations:", recommendations)
+            print("Outfit Images:", outfit_images)
+            return recommendations, outfit_images
+        else:
+            print("No recommendations generated.")
+            return None, None
+    except Exception as e:
+        print(f"Error generating recommendation: {e}")
+        return None, None
+
 
 # Generate recommendation
     try:
