@@ -106,7 +106,7 @@ with tab1:
                 from api.outfit_rec import main as fetch_recommendation
                 recommendation = fetch_recommendation()
                 st.success("Recommendation Generated!")
-                st.text_area("Outfit Recommendation:", recommendation, height=200)
+                st.text_area(label="Outfit Recommendation:", value=recommendation, height=200)
             except Exception as e:
                 st.error(f"Error generating recommendation: {e}")
 
