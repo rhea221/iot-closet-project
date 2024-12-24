@@ -6,7 +6,10 @@ from dotenv import load_dotenv
 import os
 import uuid
 from datetime import datetime, timezone
-import openai
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), 'api'))
+from api.outfit_rec import main as fetch_recommendation
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
@@ -87,10 +90,26 @@ def fetch_weather_data():
 
 st.title("IoT Closet Manager")
 
-tab1, tab2 = st.tabs(["My Closet", "My Database"])
+tab1, tab2, tab3 = st.tabs(["Recommendations", "My Closet", "My Database"])
+
+# Recommendations --------------------------------
+with tab1:
+    st.header("Recommendations")
+
+    # Trigger Recommendation System
+    if st.button("Get Outfit Recommendation"):
+        with st.spinner("Fetching recommendation..."):
+            try:
+                # Run outfit_rec.py logic and fetch the recommendation
+                from api.outfit_rec import main as fetch_recommendation
+                recommendation = fetch_recommendation()
+                st.success("Recommendation Generated!")
+                st.text_area("Outfit Recommendation:", value=recommendation, height=200)
+            except Exception as e:
+                st.error(f"Error generating recommendation: {e}")
 
 # My Closet --------------------------------------
-with tab1:
+with tab2:
     st.header("My Closet")
 
     # Upload Image Section
@@ -161,8 +180,8 @@ with tab1:
                 st.session_state.clear()  # Clear all session state to reset the app
                 st.experimental_rerun()  # Rerun the app to start fresh
 
-# Weather Data ------------------------------------------
-with tab2:
+# Database ------------------------------------------
+with tab3:
     st.header("My Database")
 
     # Fetch data and display
