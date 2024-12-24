@@ -56,7 +56,7 @@ def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
     event_details = []
     for event in events:
         details = {
-            "id": event.get("id", ""),
+            "google-event-id": event.get("id", ""),
             "title": event.get("summary", "No Title"),
             "start_time": event["start"].get("dateTime", event["start"].get("date")),
             "location": event.get("location", "Unknown"),
@@ -96,7 +96,7 @@ def save_events_to_supabase(events):
         for event in events:
             # Insert each event into the Supabase table
             supabase.table(table_name).insert({
-                "id": event["id"],
+                "google-event-id": event["id"],
                 "title": event["title"],
                 "start_time": event["start_time"],
                 "location": event["location"],
