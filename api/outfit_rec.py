@@ -127,18 +127,16 @@ def main():
     # Define available tags (from app.py dropdowns)
     available_tags = [
     # Colors
-    "🔴 Red", "🔵 Blue", "🟢 Green", "🟤 Brown", "🩷 Pink", "⚫ Black", "⚪ White", "💜 Purple", "🟡 Yellow", "🟠 Orange",
+    "🔴 Red", "🔵 Blue", "🟢 Green", "🟤 Brown", "🩷 Pink", "⚫ Black", "⚪ White", "💜 Purple", "🟡 Yellow", "🟠 Orange", "⚪ Silver",
     
     # Types
-    "👕 T-shirt", "👚 Sweatshirt", "🧥 Hoodie", "🧣 Sweater", "🧥 Jacket", 
-    "👖 Trousers", "👖 Jeans", "👖 Joggers", "🩳 Shorts", 
-    "👗 Long Skirt", "👗 Short Skirt", "👟 Sneakers", "👢 Boots",
+    "👕 T-shirt", "👚 Sweatshirt", "🧥 Hoodie", "🧣 Sweater", "🧣 Cardigan", "🧥 Jacket", "🧥 Puffer", "👖 Trousers", "👖 Jeans", "👖 Joggers", "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt", "👟 Sneakers", "👢 Boots",
     
     # Materials
-    "🧵 Cotton", "👖 Denim", "👜 Leather", "🧶 Wool", "🧵 Polyester", "🎾 Mesh",
+    "🧵 Cotton", "👖 Denim", "👜 Leather", "🧶 Wool", "🧵 Polyester", "🎾 Mesh", "Suede",
     
     # Patterns
-    "⬛ Solid", "➖ Striped", "🏁 Checked", "🟫 Camo",
+    "⬛ Solid", "➖ Striped", "🏁 Checked", "🟫 Camo", "🌸 Festive",
     
     # Styles
     "🎽 Casual", "🕶 Streetwear", "👟 Sporty", "🤵 Formal", "🎉 Party", "💼 Work",

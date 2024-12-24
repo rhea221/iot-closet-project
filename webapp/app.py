@@ -137,10 +137,10 @@ with tab1:
         st.subheader("Add Tags to Your Item")
 
         # Dropdowns for tagging
-        color = st.multiselect("Select Color:",  ["🔴 Red", "🔵 Blue", "🟢 Green", "🟤 Brown", "🩷 Pink", "⚫ Black", "⚪ White", "💜 Purple", "🟡 Yellow", "🟠 Orange"], key="color", max_selections=3)
-        type = st.multiselect("Select Type:", ["👕 T-shirt", "👚 Sweatshirt", "🧥 Hoodie", "🧣 Sweater", "🧥 Jacket", "👖 Trousers", "👖 Jeans", "👖 Joggers", "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt", "👟 Sneakers", "👢 Boots"], key="type", max_selections=3)
-        material = st.multiselect("Select Material:", ["🧵 Cotton", "👖 Denim", "👜 Leather", "🧶 Wool", "🧵 Polyester", "🎾 Mesh"], key="material", max_selections=3)
-        pattern = st.multiselect("Select Pattern:", ["⬛ Solid", "➖ Striped", "🏁 Checked", "🟫 Camo"], key="pattern", max_selections=3)
+        type = st.multiselect("Select Type:", ["👕 T-shirt", "👚 Sweatshirt", "🧥 Hoodie", "🧣 Sweater", "🧣 Cardigan", "🧥 Jacket", "🧥 Puffer", "👖 Trousers", "👖 Jeans", "👖 Joggers", "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt", "👟 Sneakers", "👢 Boots"], key="type", max_selections=1)
+        color = st.multiselect("Select Color:",  ["🔴 Red", "🔵 Blue", "🟢 Green", "🟤 Brown", "🩷 Pink", "⚫ Black", "⚪ White", "💜 Purple", "🟡 Yellow", "🟠 Orange", "⚪ Silver"], key="color", max_selections=3)
+        material = st.multiselect("Select Material:", ["🧵 Cotton", "👖 Denim", "👜 Leather", "🧶 Wool", "🧵 Polyester", "🎾 Mesh", "Suede"], key="material", max_selections=1)
+        pattern = st.multiselect("Select Pattern:", ["⬛ Solid", "➖ Striped", "🏁 Checked", "🟫 Camo", "🌸 Festive"], key="pattern", max_selections=1)
         style = st.multiselect("Select Style:", ["🎽 Casual", "🕶 Streetwear", "👟 Sporty", "🤵 Formal", "🎉 Party", "💼 Work"], key="style", max_selections=3)
         fit = st.multiselect("Select Fit:", ["🤏 Slim Fit", "📦 Baggy", "🎯 Regular Fit"], key="fit", max_selections=3)
 
@@ -155,6 +155,11 @@ with tab1:
                 del st.session_state["image_url"]
             else:
                 st.error("Failed to save tags.")
+
+            #"Start Over" button
+            if st.button("Start Over"):
+                st.session_state.clear()  # Clear all session state to reset the app
+                st.experimental_rerun()  # Rerun the app to start fresh
 
 # Weather Data ------------------------------------------
 with tab2:
