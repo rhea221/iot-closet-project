@@ -52,7 +52,7 @@ def save_image_metadata_to_supabase(image_url, tags):
     try:
         data = {
             "image_url": image_url,
-            "tags": tags,
+            "tags": tags,  # Save tags as a JSON array
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         # Insert data into Supabase table
@@ -68,6 +68,7 @@ def save_image_metadata_to_supabase(image_url, tags):
     except Exception as e:
         st.error(f"Error saving metadata to Supabase: {e}")
         return False
+
 
 # Weather Data ------------------------------------------
 def fetch_weather_data():
@@ -172,8 +173,15 @@ with tab2:
         style = st.multiselect("Select Style:", ["🎽 Casual", "🕶 Streetwear", "👟 Sporty", "🤵 Formal", "🎉 Party", "💼 Work"], key="style", max_selections=3)
         fit = st.multiselect("Select Fit:", ["🤏 Slim Fit", "📦 Baggy", "🎯 Regular Fit"], key="fit", max_selections=3)
 
-        # Combine tags
-        tags = f"{color}, {type}, {material}, {pattern}, {style}, {fit}"
+        # Combine tags into a proper JSON array
+        tags = [
+            *color,
+            *type,
+            *material,
+            *pattern,
+            *style,
+            *fit
+        ]
 
         # Final confirmation to save
         if st.button("Confirm and Save Tags"):
