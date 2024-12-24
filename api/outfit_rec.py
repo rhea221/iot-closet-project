@@ -212,7 +212,7 @@ def main():
 
     # Generate recommendation
     recommendation = recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags)
-    print(recommendation)
+    return recommendation
 
 if __name__ == "__main__":
     main()
