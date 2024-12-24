@@ -1,6 +1,6 @@
 requests
-flask           # web app
-msal            # Microsoft Graph API
+flask
+msal
 python-dotenv
 pandas
 matplotlib
@@ -12,3 +12,19 @@ supabase
 pillow
 openai
 
+# Additions for CI/CD and tooling
+PyYAML
+pip
+setuptools
+wheel
+
+# Optional: Testing and Code Quality
+pytest
+pytest-cov
+black
+flake8
+isort
+
+# Optional: Scheduling
+schedule
+apscheduler
