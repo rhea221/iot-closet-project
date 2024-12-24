@@ -166,10 +166,11 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
         f"- {avg_event_time_context}\n"
         f"- Tags: {tags_context}\n"
         f"- Clothing Items:\n{clothing_context}\n\n"
-        f"Provide the answer in this format, with no labels, headings, tags:\n"
-        f"Temperature and weather description.\n"
-        f"I see you have (events) today.\n"
-        f"I recommend wearing: list of clothes ('top, bottom, shoes, jacket')"
+        f"Provide the output strictly in this JSON format (no extra text):\n"
+        f"["
+        f"  {{\"tags\": \"[tag], [tag], [tag]\", \"image_url\": \"https://example.com/image1.jpg\"}},"
+        f"  {{\"tags\": \"[tag], [tag], [tag]\", \"image_url\": \"https://example.com/image2.jpg\"}}"
+        f"]"
     )
     # maybe for streamlit provide justification, display, don't
 
@@ -185,8 +186,13 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
             temperature=0.7,
         )
         # Extract and return content from response
-        print("OpenAI API Response:", response)
-        return response.choices[0].message.content
+        response_text = response.choices[0].message.content.strip()
+
+        # Extract tags or descriptions from OpenAI response
+        selected_items = [
+            item for item in clothing_items if any(tag in item["tags"] for tag in response_text.split(","))
+        ]
+        return selected_items
     except Exception as e:
         raise Exception(f"Error generating clothing recommendation: {str(e)}")
 
