@@ -20,7 +20,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Path to your service account JSON key file
-SERVICE_ACCOUNT_FILE = 'config/service_account_key.json'
+SERVICE_ACCOUNT_FILE = 'service_account_key.json'
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
 def authenticate_google_calendar():
