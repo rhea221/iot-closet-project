@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 import os
 import uuid
 from datetime import datetime, timezone
+import openai
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
@@ -16,6 +17,8 @@ load_dotenv(dotenv_path="config/.env")
 # Initialize Supabase
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
+
+
 if not supabase_url or not supabase_key:
     st.error("Supabase credentials are missing. Check your environment variables.")
     st.stop()

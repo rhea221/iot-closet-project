@@ -12,6 +12,7 @@ load_dotenv(dotenv_path="config/.env")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 if not SUPABASE_URL or not SUPABASE_KEY or not OPENAI_API_KEY:
     raise Exception("Supabase or OpenAI credentials are missing. Check your environment variables.")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -47,15 +48,35 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
     weather_context = f"The current temperature is {weather['temp']}°C with {weather['weather']}."
 
     # Format remaining events with fallback for missing keys
-    if remaining_events:
-        event_context = " ".join([
+    if not remaining_events:
+        # No events left for today, generate a weather-based quick statement
+        prompt = (
+            f"Give me a light-hearted summary of the weather and recommendation on what I should wear, in a very short paragraph.:\n"
+            f"- Weather: {weather_context}\n"
+        )
+
+    # Call OpenAI API
+        try:
+            response = openai.chat.completions.create(
+                model="gpt-4",  # Replace with gpt-3.5-turbo if gpt-4 access is unavailable
+                messages=[
+                    {"role": "system", "content": "You are a personal assistant giving me advice."},
+                    {"role": "user", "content": prompt},
+                ],
+                max_tokens=50,
+                temperature=0.7,
+            )
+            # Extract and return content from response
+            return response.choices[0].message.content
+        except Exception as e:
+            raise Exception(f"Error generating clothing recommendation: {str(e)}")
+
+    event_context = " ".join([
             f"{event.get('title', 'Untitled Event')} at {event.get('location', 'No location specified')}"
             for event in remaining_events
         ])
-    else:
-        event_context = "There are no remaining events for the day."
 
-    # Format available tags
+    # if remaining_events
     tags_context = f"Available tags are: {', '.join(available_tags)}."
 
     # Format clothing items
@@ -71,28 +92,27 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
         f"- Events: {event_context}\n"
         f"- Tags: {tags_context}\n"
         f"- Clothing Items:\n{clothing_context}\n\n"
-        f"Select a top and a bottom clothing item from the list and provide a short justification for your choices."
+        f"Provide the answer in this format, with no labels, headings, tags:\n"
+        f"Temperature and weather description.\n"
+        f"(clothing item), (clothing item)."
     )
+    # maybe for streamlit provide justification, display, don't
 
     # Call OpenAI API
     try:
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model="gpt-4",  # Replace with gpt-3.5-turbo if gpt-4 access is unavailable
             messages=[
                 {"role": "system", "content": "You are a fashion stylist and clothing analyst."},
                 {"role": "user", "content": prompt},
-            ]
+            ],
+            max_tokens=50,
+            temperature=0.7,
         )
         # Extract and return content from response
         return response.choices[0].message.content
     except Exception as e:
         raise Exception(f"Error generating clothing recommendation: {str(e)}")
-
-
-
-
-
-
 
 # Main Logic
 def main():
