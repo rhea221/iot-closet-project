@@ -1,14 +1,12 @@
 # Handles Google Calendar API integration, to fetch upcoming events and upload to database
 
-import streamlit as st
-import requests
 import os
+import pytz
 from dotenv import load_dotenv
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from supabase import create_client, Client
 from googleapiclient.discovery import build
 from google.oauth2 import service_account
-import pytz
 from dateutil import parser
 
 # Load environment variables
@@ -22,8 +20,8 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Path to your service account JSON key file
-SERVICE_ACCOUNT_FILE = 'service_account_key.json'  
-SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']  
+SERVICE_ACCOUNT_FILE = 'config/service_account_key.json'
+SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
 def authenticate_google_calendar():
     """Authenticate and build the Google Calendar service object."""
@@ -32,7 +30,7 @@ def authenticate_google_calendar():
     service = build('calendar', 'v3', credentials=credentials)
     return service
 
-def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
+def get_upcoming_events_today(calendar_id='primary'):
     """
     Fetch all upcoming events for the remainder of the current day from Google Calendar.
     """
@@ -56,7 +54,7 @@ def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
     event_details = []
     for event in events:
         details = {
-            "google-event-id": event.get("google-event-id"),
+            "google-event-id": event.get("id", ""),
             "title": event.get("summary", "No Title"),
             "start_time": event["start"].get("dateTime", event["start"].get("date")),
             "location": event.get("location", "Unknown"),
@@ -86,7 +84,7 @@ def fetch_existing_events():
 
 def filter_new_events(events, existing_events):
     """Filter out events that are already in the database."""
-    existing_event_ids = {event["google-event-id"] for event in existing_events}  # Assuming each event has a unique 'id' field
+    existing_event_ids = {event["google-event-id"] for event in existing_events if "google-event-id" in event}
     return [event for event in events if event["google-event-id"] not in existing_event_ids]
 
 def save_events_to_supabase(events):
@@ -100,6 +98,8 @@ def save_events_to_supabase(events):
                 "title": event["title"],
                 "start_time": event["start_time"],
                 "location": event["location"],
+                "description": event["description"],
+                "duration": event["duration"],
                 "created_at": datetime.now(pytz.UTC).isoformat()
             }).execute()
         print("Events saved to Supabase successfully!")
