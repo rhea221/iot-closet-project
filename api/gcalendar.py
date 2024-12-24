@@ -56,6 +56,7 @@ def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
     event_details = []
     for event in events:
         details = {
+            "id": event.get("id", ""),
             "title": event.get("summary", "No Title"),
             "start_time": event["start"].get("dateTime", event["start"].get("date")),
             "location": event.get("location", "Unknown"),
@@ -76,6 +77,18 @@ def calculate_duration(start, end):
 
     return (end_time - start_time).total_seconds() / 3600  # Return duration in hours
 
+def fetch_existing_events():
+    """Fetch existing calendar events from Supabase for today."""
+    now = datetime.now(pytz.UTC)
+    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    response = supabase.table("calendar-events").select("*").gte("start_time", start_of_day.isoformat()).execute()
+    return response.data or []
+
+def filter_new_events(events, existing_events):
+    """Filter out events that are already in the database."""
+    existing_event_ids = {event["id"] for event in existing_events}  # Assuming each event has a unique 'id' field
+    return [event for event in events if event["id"] not in existing_event_ids]
+
 def save_events_to_supabase(events):
     """Save today's events to the Supabase database."""
     table_name = "calendar-events"
@@ -83,8 +96,10 @@ def save_events_to_supabase(events):
         for event in events:
             # Insert each event into the Supabase table
             supabase.table(table_name).insert({
+                "id": event["id"],
                 "title": event["title"],
                 "start_time": event["start_time"],
+                "location": event["location"],
                 "created_at": datetime.now(pytz.UTC).isoformat()
             }).execute()
         print("Events saved to Supabase successfully!")
@@ -95,9 +110,15 @@ def save_events_to_supabase(events):
 if __name__ == "__main__":
     events_today = get_upcoming_events_today()
     if events_today:
-        print("Upcoming Events Today:")
-        for event in events_today:
-            print(f"- {event['title']} at {event['start_time']}")
-        save_events_to_supabase(events_today)
+        existing_events = fetch_existing_events()
+        new_events = filter_new_events(events_today, existing_events)
+
+        if new_events:
+            print("New Events to Insert:")
+            for event in new_events:
+                print(f"- {event['title']} at {event['start_time']}")
+            save_events_to_supabase(new_events)
+        else:
+            print("No new events to add. All events are up to date.")
     else:
         print("No upcoming events found for today.")

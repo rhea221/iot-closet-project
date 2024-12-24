@@ -44,15 +44,25 @@ def fetch_clothing_items():
 def calculate_dominant_event_category(events):
     """Determine the dominant category of events."""
     categories = {
+        "university": [],
         "work": ["meeting", "office", "workshop"],
-        "social": ["party", "club", "dinner", "gathering"],
+        "dining": ["brunch", "lunch", "dinner"],
+        "social": ["party", "club", "dinner", "gathering", "games"],
         "sport": ["gym", "bouldering", "running", "exercise"],
-        "leisure": ["movie", "museum", "picnic", "festival"],
+        "leisure": ["movie", "museum", "musical", "picnic", "festival"],
+        "appointment": ["appointment"]
     }
+
+    university_locations = ["Dyson Building", "Library", "Imperial College Londong"]
 
     category_count = {key: 0 for key in categories}
     for event in events:
         title = event.get("title", "").lower()
+        location = event.get("location", "").lower()
+
+        if any (loc.lower() in location for loc in university_locations):
+            category_count["university"] +=1
+            
         for category, keywords in categories.items():
             if any(keyword in title for keyword in keywords):
                 category_count[category] += 1
