@@ -41,6 +41,48 @@ def fetch_clothing_items():
     response = supabase.table("closet-items").select("*").execute()
     return response.data or []
 
+def calculate_dominant_event_category(events):
+    """Determine the dominant category of events."""
+    categories = {
+        "work": ["meeting", "office", "workshop"],
+        "social": ["party", "club", "dinner", "gathering"],
+        "sport": ["gym", "bouldering", "running", "exercise"],
+        "leisure": ["movie", "museum", "picnic", "festival"],
+    }
+
+    category_count = {key: 0 for key in categories}
+    for event in events:
+        title = event.get("title", "").lower()
+        for category, keywords in categories.items():
+            if any(keyword in title for keyword in keywords):
+                category_count[category] += 1
+                if category == "sport":
+                    sports_priority = True  # Mark if a sports event is present
+
+    # Prioritize sports category
+    if sports_priority:
+        return "sport"
+
+    # Get the dominant category
+    dominant_category = max(category_count, key=category_count.get)
+    return dominant_category
+
+def calculate_average_event_time(events):
+    """Calculate the average start time of events."""
+    if not events:
+        return None
+
+    total_seconds = 0
+    for event in events:
+        start_time = event.get("start_time")
+        if start_time:
+            event_time = parser.isoparse(start_time).replace(tzinfo=timezone.utc)
+            total_seconds += event_time.timestamp()
+
+    avg_timestamp = total_seconds / len(events)
+    avg_time = datetime.fromtimestamp(avg_timestamp, tz=timezone.utc)
+    return avg_time
+
 # OpenAI Recommendation Logic
 def recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags):
     """Use OpenAI to recommend clothing items based on weather, events, and available tags."""
@@ -51,7 +93,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
     if not remaining_events:
         # No events left for today, generate a weather-based quick statement
         prompt = (
-            f"Give me a light-hearted summary of the weather and recommendation on what I should wear, in a very short paragraph.:\n"
+            f"Give me a light-hearted summary of the weather and recommendation on what I should wear, and short justification on the recommendation, in a very short paragraph.:\n"
             f"- Weather: {weather_context}\n"
         )
 
@@ -63,7 +105,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
                     {"role": "system", "content": "You are a personal assistant giving me advice."},
                     {"role": "user", "content": prompt},
                 ],
-                max_tokens=50,
+                max_tokens=100,
                 temperature=0.7,
             )
             # Extract and return content from response
@@ -71,10 +113,18 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
         except Exception as e:
             raise Exception(f"Error generating clothing recommendation: {str(e)}")
 
+    # Calculate dominant event category and average event time
+    dominant_category = calculate_dominant_event_category(remaining_events)
+    avg_event_time = calculate_average_event_time(remaining_events)
+
     event_context = " ".join([
             f"{event.get('title', 'Untitled Event')} at {event.get('location', 'No location specified')}"
             for event in remaining_events
-        ])
+    ])
+    avg_event_time_context = (
+        f"The average event time is {avg_event_time.strftime('%H:%M %p')} UTC." if avg_event_time else ""
+    )
+
 
     # if remaining_events
     tags_context = f"Available tags are: {', '.join(available_tags)}."
@@ -87,14 +137,16 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
 
     # Create prompt for OpenAI
     prompt = (
-        f"Based on the following information, recommend a top and a bottom clothing item:\n"
+        f"Based on the following information, give a short summary of the weather, recommend a top, bottom, shoes, jacket clothing item tailored to the dominant event category:\n"
         f"- Weather: {weather_context}\n"
         f"- Events: {event_context}\n"
+        f"- Dominant Category: {dominant_category}\n"
+        f"- {avg_event_time_context}\n"
         f"- Tags: {tags_context}\n"
         f"- Clothing Items:\n{clothing_context}\n\n"
         f"Provide the answer in this format, with no labels, headings, tags:\n"
         f"Temperature and weather description.\n"
-        f"(clothing item), (clothing item)."
+        f"For your 'event', I recommend: list of clothes ('top, bottom, shoes, jacket')"
     )
     # maybe for streamlit provide justification, display, don't
 
@@ -106,7 +158,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
                 {"role": "system", "content": "You are a fashion stylist and clothing analyst."},
                 {"role": "user", "content": prompt},
             ],
-            max_tokens=50,
+            max_tokens=150,
             temperature=0.7,
         )
         # Extract and return content from response
@@ -147,7 +199,6 @@ def main():
 
     # Generate recommendation
     recommendation = recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags)
-    print("Recommendation:")
     print(recommendation)
 
 if __name__ == "__main__":
