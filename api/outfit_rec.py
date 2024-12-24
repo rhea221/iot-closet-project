@@ -126,11 +126,26 @@ def main():
 
     # Define available tags (from app.py dropdowns)
     available_tags = [
-        "#red", "#blue", "#green", "#yellow", "#pink", "#black", "#white",
-        "#tshirt", "#sweatshirt", "#jacket", "#pants", "#skirt", "#dress", "#shorts",
-        "#cotton", "#denim", "#leather", "#wool", "#polyester",
-        "#solid", "#striped", "#checked", "#polka-dot", "#floral"
-    ]
+    # Colors
+    "🔴 Red", "🔵 Blue", "🟢 Green", "🟤 Brown", "🩷 Pink", "⚫ Black", "⚪ White", "💜 Purple", "🟡 Yellow", "🟠 Orange",
+    
+    # Types
+    "👕 T-shirt", "👚 Sweatshirt", "🧥 Hoodie", "🧣 Sweater", "🧥 Jacket", 
+    "👖 Trousers", "👖 Jeans", "👖 Joggers", "🩳 Shorts", 
+    "👗 Long Skirt", "👗 Short Skirt", "👟 Sneakers", "👢 Boots",
+    
+    # Materials
+    "🧵 Cotton", "👖 Denim", "👜 Leather", "🧶 Wool", "🧵 Polyester", "🎾 Mesh",
+    
+    # Patterns
+    "⬛ Solid", "➖ Striped", "🏁 Checked", "🟫 Camo",
+    
+    # Styles
+    "🎽 Casual", "🕶 Streetwear", "👟 Sporty", "🤵 Formal", "🎉 Party", "💼 Work",
+    
+    # Fits
+    "🤏 Slim Fit", "📦 Baggy", "🎯 Regular Fit"
+]
 
     # Generate recommendation
     recommendation = recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags)
