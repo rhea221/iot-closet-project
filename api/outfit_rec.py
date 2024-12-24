@@ -1,3 +1,4 @@
+import json
 import openai
 from supabase import create_client, Client
 from datetime import datetime, timezone
@@ -95,15 +96,17 @@ def calculate_average_event_time(events):
     avg_time = datetime.fromtimestamp(avg_timestamp, tz=timezone.utc)
     return avg_time
 
-def get_images_from_recommendation(recommendation, clothing_items):
+def get_images_from_recommendation(recommendations, clothing_items):
     """Retrieve images for recommended items based on tags."""
-    recommended_tags = [tag.strip() for tag in recommendation.split(",")]
     selected_items = []
-    for item in clothing_items:
-        item_tags = item["tags"].split(", ")
-        if any(tag in item_tags for tag in recommended_tags):
-            selected_items.append(item["image_url"])
+    for recommendation in recommendations:
+        tags = recommendation.get("tags", "").split(", ")
+        for item in clothing_items:
+            item_tags = item["tags"].split(", ")
+            if any(tag in item_tags for tag in tags):
+                selected_items.append(item["image_url"])
     return selected_items
+
 
 # OpenAI Recommendation Logic
 def recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags):
@@ -186,11 +189,16 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
             temperature=0.7,
         )
         # Extract and return content from response
-        print("OpenAI API Response:", response)
-        return response.choices[0].message.content
+        response_content = response.choices[0].message.content
+        recommendations = json.loads(response_content)  # Ensure it parses as JSON
+        if not isinstance(recommendations, list):
+            raise ValueError("Invalid recommendation format. Expected a list of dictionaries.")
+        return recommendations
+    except json.JSONDecodeError as e:
+        raise Exception(f"Error parsing OpenAI response: {str(e)}")
     except Exception as e:
         raise Exception(f"Error generating clothing recommendation: {str(e)}")
-
+    
 # Main Logic
 def main():
     weather = fetch_weather()
@@ -222,10 +230,15 @@ def main():
     "🤏 Slim Fit", "📦 Baggy", "🎯 Regular Fit"
 ]
 
-    # Generate recommendation
-    recommendation = recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags)
-    outfit_images = get_images_from_recommendation(recommendation, clothing_items)
-    return recommendation, outfit_images
+# Generate recommendation
+    try:
+        recommendations = recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags)
+        outfit_images = get_images_from_recommendation(recommendations, clothing_items)
+        print("Recommendations:", recommendations)
+        print("Outfit Images:", outfit_images)
+        return recommendations, outfit_images
+    except Exception as e:
+        print(f"Error generating recommendation: {e}")
 
 if __name__ == "__main__":
     main()
