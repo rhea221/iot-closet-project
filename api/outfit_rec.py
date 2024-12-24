@@ -199,13 +199,25 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
             max_tokens=150,
             temperature=0.7,
         )
-        response_content = response.choices[0].message.content.strip()
-        recommendations = json.loads(response_content)
-        return recommendations
-    except json.JSONDecodeError as e:
-        raise Exception(f"Failed to parse OpenAI response: {e}")
+
+        print("OpenAI Prompt:", prompt)
+
+        response_content = response.choices[0].message.content
+        try:
+            recommendations = json.loads(response_content)  # Ensure it parses as JSON
+            if not isinstance(recommendations, list):
+                raise ValueError("Invalid recommendation format. Expected a list of dictionaries.")
+        except json.JSONDecodeError as e:
+            print(f"JSONDecodeError: {e}")
+            print("Raw Response Content:", response_content)
+            return None  # Return None to indicate failure
+        except Exception as e:
+            print(f"Error parsing recommendation: {e}")
+            return None
+        return recommendations  # Return parsed recommendations
     except Exception as e:
-        raise Exception(f"Error generating recommendation: {e}")
+        print(f"Error generating clothing recommendation: {e}")
+        return None
     
 # Main Logic
 def main():
