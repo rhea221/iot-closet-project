@@ -103,18 +103,29 @@ with tab1:
     if st.button("Get Outfit Recommendation"):
         with st.spinner("Fetching recommendation..."):
             try:
+                # Fetch recommendations and outfit images
                 recommendations, outfit_images = fetch_recommendation()
 
                 if recommendations:
                     st.success("Recommendation Generated!")
                     st.subheader("Your Outfit Recommendation:")
                     
+                    # Display images with captions
                     for item in outfit_images:
                         st.image(item["image_url"], caption=", ".join(item["tags"]), use_column_width=True)
+                    
+                    # Display raw OpenAI response in a text box
+                    st.subheader("OpenAI Response Debug:")
+                    st.text_area(
+                        label="OpenAI Response",
+                        value=str(recommendations),
+                        height=200
+                    )
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:
                 st.error(f"Error generating recommendation: {e}")
+
 
 
 # My Closet --------------------------------------

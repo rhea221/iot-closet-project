@@ -112,12 +112,14 @@ def calculate_average_event_time(events):
 def get_images_from_recommendation(recommendations, clothing_items):
     selected_items = []
     for recommendation in recommendations:
-        tags = recommendation.get("tags", "").split(", ")
+        tags = recommendation.get("tags", [])
         for item in clothing_items:
-            item_tags = item["tags"]  # Ensure item["tags"] is a list
+            item_tags = item.get("tags", [])
+            # Check if any tag matches
             if any(tag in item_tags for tag in tags):
-                selected_items.append(item["image_url"])
+                selected_items.append({"image_url": item["image_url"], "tags": item_tags})
     return selected_items
+
 
 
 
@@ -202,22 +204,19 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
 
         print("OpenAI Prompt:", prompt)
 
+        # Extract the OpenAI response content
         response_content = response.choices[0].message.content
-        try:
-            recommendations = json.loads(response_content)  # Ensure it parses as JSON
-            if not isinstance(recommendations, list):
-                raise ValueError("Invalid recommendation format. Expected a list of dictionaries.")
-        except json.JSONDecodeError as e:
-            print(f"JSONDecodeError: {e}")
-            print("Raw Response Content:", response_content)
-            return None  # Return None to indicate failure
-        except Exception as e:
-            print(f"Error parsing recommendation: {e}")
-            return None
-        return recommendations  # Return parsed recommendations
+
+        # Parse the content as JSON
+        recommendations = json.loads(response_content)
+
+        # Validate the response structure
+        if not isinstance(recommendations, list):
+            raise ValueError("Invalid recommendation format. Expected a list of dictionaries.")
+
+        return recommendations
     except Exception as e:
-        print(f"Error generating clothing recommendation: {e}")
-        return None
+        raise Exception(f"Error generating clothing recommendation: {e}")
     
 # Main Logic
 def main():
