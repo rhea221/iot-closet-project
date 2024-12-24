@@ -36,12 +36,12 @@ jobs:
     # Step 5: Export secrets as environment variables
     - name: Set environment variables
       env:
-        NWEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
+        WEATHER_API_KEY: ${{ secrets.WEATHER_API_KEY }}
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
         SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       run: |
-        echo "OPENWEATHER_API_KEY=$OPENWEATHER_API_KEY" >> $GITHUB_ENV  
+        echo "WEATHER_API_KEY=$WEATHER_API_KEY" >> $GITHUB_ENV  
         echo "SUPABASE_URL=$SUPABASE_URL" >> $GITHUB_ENV
         echo "SUPABASE_KEY=$SUPABASE_KEY" >> $GITHUB_ENV
         echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> $GITHUB_ENV
