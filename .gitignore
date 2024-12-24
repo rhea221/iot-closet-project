@@ -42,3 +42,4 @@ data/*.db
 # Other files
 test.py
 outdated.txt
+encoded_service_account_key.txt

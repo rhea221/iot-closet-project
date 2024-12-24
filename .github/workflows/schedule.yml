@@ -26,7 +26,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    # Step 4: Export secrets as environment variables
+    # Step 4: Decode the service account key and save it as a file
+    - name: Decode Service Account Key
+      env:
+        SERVICE_ACCOUNT_KEY: ${{ secrets.SERVICE_ACCOUNT_KEY }}
+      run: |
+        echo "$SERVICE_ACCOUNT_KEY" | base64 --decode > config/service_account_key.json
+
+    # Step 5: Export secrets as environment variables
     - name: Set environment variables
       env:
         SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -37,14 +44,11 @@ jobs:
         echo "SUPABASE_KEY=$SUPABASE_KEY" >> $GITHUB_ENV
         echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> $GITHUB_ENV
 
-    # Step 5: Run the weather script
+    # Step 6: Run the weather script
     - name: Run weather script
       run: python api/weather.py
 
-    # Step 6: Run the calendar script
+    # Step 7: Run the calendar script
     - name: Run calendar script
       run: python api/gcalendar.py
 
-    # Step 7: Run the outfit recommendation script
-    - name: Run outfit recommendation script
-      run: python api/outfit_rec.py
