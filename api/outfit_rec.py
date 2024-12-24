@@ -159,7 +159,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
 
     # Create prompt for OpenAI
     prompt = (
-        f"Based on the following information, give a short summary of the weather, recommend a top, bottom, shoes, jacket clothing item tailored to the dominant event category:\n"
+        f"Based on the following information, recommend a top, bottom, shoes, jacket clothing item tailored to the dominant event category:\n"
         f"- Weather: {weather_context}\n"
         f"- Events: {event_context}\n"
         f"- Dominant Category: {dominant_category}\n"
@@ -186,13 +186,8 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
             temperature=0.7,
         )
         # Extract and return content from response
-        response_text = response.choices[0].message.content.strip()
-
-        # Extract tags or descriptions from OpenAI response
-        selected_items = [
-            item for item in clothing_items if any(tag in item["tags"] for tag in response_text.split(","))
-        ]
-        return selected_items
+        print("OpenAI API Response:", response)
+        return response.choices[0].message.content
     except Exception as e:
         raise Exception(f"Error generating clothing recommendation: {str(e)}")
 
