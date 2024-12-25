@@ -269,11 +269,8 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
             "outfit_recommendation": recommended_tags
         }
     
-    except json.JSONDecodeError as e:
-        print("JSON Parsing Error:", e)
-        raise Exception(f"Error parsing OpenAI response: {e}")
     except Exception as e:
-        raise Exception(f"Error generating recommendation: {e}")
+        raise Exception(f"Error generating recommendation: {str(e)}")
     
 # Main Logic
 def main():
