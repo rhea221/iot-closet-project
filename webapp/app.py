@@ -295,10 +295,6 @@ with tab2:
         # Send selected items to laundry
         if st.button("Send to Laundry"):
             send_to_laundry(selected_for_laundry)
-            # Immediately update session state to remove items sent to laundry
-            for item in selected_for_laundry:
-                item["status"] = "laundry"
-            st.experimental_rerun()  # Rerun the app to reflect updated data
 
     # Fetch items currently in laundry
     try:
