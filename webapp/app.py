@@ -96,6 +96,55 @@ st.title("IoT Closet Manager")
 tab1, tab2, tab3 = st.tabs(["Recommendations", "My Closet", "My Database"])
 
 # Recommendations --------------------------------
+# Define a dark mode style
+dark_mode_style = """
+<style>
+    body {
+        background-color: #1e1e1e;
+        color: #f1f1f1;
+    }
+    .stButton > button {
+        background-color: #333;
+        color: #f1f1f1;
+        border-radius: 5px;
+        border: 1px solid #555;
+    }
+    .stButton > button:hover {
+        background-color: #444;
+        color: #ffffff;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        color: #f1f1f1;
+    }
+    p, div {
+        color: #c1c1c1;
+    }
+</style>
+"""
+
+# Add the dark mode style
+st.markdown(dark_mode_style, unsafe_allow_html=True)
+
+# Landing Section
+with st.container():
+    st.title("Welcome to Your IoT Closet!")
+    try:
+        # Fetch summarized data
+        weather = fetch_weather()
+        remaining_events = fetch_remaining_events()
+
+        if weather and remaining_events:
+            weather_summary = f"The current temperature is {weather['temp']}°C with {weather['weather']}."
+            event_summary = f"You have {len(remaining_events)} event(s) left today."
+        else:
+            weather_summary = "Weather data is currently unavailable."
+            event_summary = "No events found for today."
+
+        st.subheader(f"Hello! {weather_summary} {event_summary}")
+    except Exception as e:
+        st.error(f"Error fetching data: {e}")
+
+# Recommendation Section
 with tab1:
     st.header("Recommendations")
 
@@ -109,14 +158,14 @@ with tab1:
                 if recommendations:
                     st.success("Recommendation Generated!")
                     st.subheader("Your Outfit Recommendation:")
-                    
+
                     # Display images with rounded corners and cleaner captions
                     for category, item in recommendations.items():
                         image_html = f"""
                         <div style="text-align: center; margin-bottom: 20px;">
                             <img src="{item['image_url']}" style="width: 200px; height: auto; border-radius: 15px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);"/>
-                            <p style="margin-top: 10px; font-size: 16px; font-weight: bold; color: #b5b5b5;">{category.capitalize()}</p>
-                            <p style="font-size: 14px; color: #dedede;">{', '.join(item['tags'])}</p>
+                            <p style="margin-top: 10px; font-size: 16px; font-weight: bold; color: #f1f1f1;">{category.capitalize()}</p>
+                            <p style="font-size: 14px; color: #c1c1c1;">{', '.join(item['tags'])}</p>
                         </div>
                         """
                         st.markdown(image_html, unsafe_allow_html=True)
