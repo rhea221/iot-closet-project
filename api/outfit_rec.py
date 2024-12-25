@@ -113,7 +113,13 @@ def get_images_from_recommendation(recommendations, clothing_items):
         best_match = None
         best_match_score = 0
 
-        for item in clothing_items:
+        # Filter clothing items strictly by category
+        category_specific_items = [
+            item for item in clothing_items if category in category_keywords
+            and any(tag in category_keywords[category] for tag in item.get("tags", []))
+        ]
+
+        for item in category_specific_items:
             if item["image_url"] in used_items:
                 continue  # Skip already used items
 
@@ -142,6 +148,8 @@ def get_images_from_recommendation(recommendations, clothing_items):
         if best_match:
             selected_items[category] = best_match
             used_items.add(best_match["image_url"])  # Mark item as used
+        else:
+            print(f"No suitable match found for category '{category}'.")
 
     return selected_items
 
