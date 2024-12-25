@@ -138,34 +138,27 @@ with st.container():
 with tab1:
     st.header("Recommendations")
 
-    # Trigger Recommendation System
     if st.button("Get Outfit Recommendation"):
         with st.spinner("Fetching recommendation..."):
             try:
-                # Fetch recommendations
                 recommendations = fetch_recommendation()
 
-                if recommendations:
-                    # Display general recommendation if present
-                    if recommendations["general_recommendation"]:
-                        st.success("General Recommendation Generated!")
-                        st.subheader("Your General Recommendation:")
-                        st.text_area("Recommendation", recommendations["general_recommendation"], height=100)
-                    
-                    # Display outfit recommendation if present
-                    if recommendations["outfit_recommendation"]:
-                        st.success("Outfit Recommendation Generated!")
-                        st.subheader("Your Outfit Recommendation:")
-
-                        for category, item in recommendations["outfit_recommendation"].items():
-                            image_html = f"""
-                            <div style="text-align: center; margin-bottom: 20px;">
-                                <img src="{item['image_url']}" style="width: 200px; height: auto; border-radius: 15px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);"/>
-                                <p style="margin-top: 10px; font-size: 16px; font-weight: bold; color: #f1f1f1;">{category.capitalize()}</p>
-                                <p style="font-size: 14px; color: #c1c1c1;">{', '.join(item['tags'])}</p>
-                            </div>
-                            """
-                            st.markdown(image_html, unsafe_allow_html=True)
+                # Handle general recommendation
+                if isinstance(recommendations, str):
+                    st.success("Recommendation Generated!")
+                    st.text_area("General Recommendation", recommendations, height=100)
+                elif recommendations and isinstance(recommendations, dict):
+                    st.success("Recommendation Generated!")
+                    st.subheader("Your Outfit Recommendation:")
+                    for category, item in recommendations.items():
+                        image_html = f"""
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <img src="{item['image_url']}" style="width: 200px; height: auto; border-radius: 15px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);"/>
+                            <p style="margin-top: 10px; font-size: 16px; font-weight: bold; color: #f1f1f1;">{category.capitalize()}</p>
+                            <p style="font-size: 14px; color: #c1c1c1;">{', '.join(item['tags'])}</p>
+                        </div>
+                        """
+                        st.markdown(image_html, unsafe_allow_html=True)
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:

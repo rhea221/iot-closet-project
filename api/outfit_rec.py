@@ -191,7 +191,6 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
     try:
         # Calculate dominant event category and average event time
         dominant_category = calculate_dominant_event_category(remaining_events)
-
         available_tags_by_category = {key: [] for key in category_keywords}
 
         # Categorize clothing items
