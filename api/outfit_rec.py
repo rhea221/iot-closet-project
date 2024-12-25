@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from dotenv import load_dotenv
 from dateutil import parser
 import os
+import re
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
@@ -36,36 +37,27 @@ def fetch_remaining_events():
     ]
     return remaining_events
 
+
 def fetch_clothing_items():
     """Fetch clothing items stored in the Supabase closet-items table."""
     response = supabase.table("closet-items").select("*").execute()
-    clothing_items = response.data or []
-
-    for item in clothing_items:
-        if isinstance(item.get("tags"), str):
-            try:
-                # Convert the string to a Python list
-                item["tags"] = eval(item["tags"])  # Use eval cautiously for known-safe data
-            except (SyntaxError, ValueError):
-                item["tags"] = []  # Default to empty list if parsing fails
-
-    return clothing_items
+    return response.data or []
 
 
 def calculate_dominant_event_category(events):
     """Determine the dominant category of events."""
     categories = {
         "university": [],
-        "work": ["meeting", "office", "workshop"],
+        "work": ["meeting", "office", "work"],
         "dining": ["brunch", "lunch", "dinner"],
         "social": ["party", "club", "dinner", "gathering", "games"],
         "sport": ["gym", "bouldering", "running", "exercise"],
         "leisure": ["movie", "museum", "musical", "picnic", "festival"],
         "appointment": ["appointment"]
     }
-
-    university_locations = ["Dyson Building", "Library", "Imperial College Londong"]
     
+    university_locations = ["Dyson Building", "Library", "Imperial College London"]
+
     category_count = {key: 0 for key in categories}
     sports_priority = False  # Track if sports events should take priority
 
@@ -82,7 +74,6 @@ def calculate_dominant_event_category(events):
                 if category == "sport":
                     sports_priority = True  # Mark if a sports event is present
 
-
     # Prioritize sports category
     if sports_priority:
         return "sport"
@@ -91,39 +82,41 @@ def calculate_dominant_event_category(events):
     dominant_category = max(category_count, key=category_count.get)
     return dominant_category
 
-def calculate_average_event_time(events):
-    """Calculate the average start time of events."""
-    if not events:
-        return None
-
-    total_seconds = 0
-    for event in events:
-        start_time = event.get("start_time")
-        if start_time:
-            event_time = parser.isoparse(start_time).replace(tzinfo=timezone.utc)
-            total_seconds += event_time.timestamp()
-
-    avg_timestamp = total_seconds / len(events)
-    avg_time = datetime.fromtimestamp(avg_timestamp, tz=timezone.utc)
-    return avg_time
 
 def get_images_from_recommendation(recommendations, clothing_items):
-    selected_items = []
+    """Retrieve clothing items from Supabase matching recommended tags and categories."""
+    selected_items = {}
+    used_items = set()  # Track already selected items to avoid duplicates
+
     for recommendation in recommendations:
-        tags = recommendation.get("tags", [])
+        category = recommendation.get("category")
+        recommendation_tags = recommendation.get("tags", "").split(", ")  # Split tags into a list
+        best_match = None
+        best_match_score = 0
+
         for item in clothing_items:
+            if item["image_url"] in used_items:
+                continue  # Skip already used items
+
             item_tags = item.get("tags", [])
-            # Check if any tag matches
-            if any(tag in item_tags for tag in tags):
-                selected_items.append({"image_url": item["image_url"], "tags": item_tags})
+            match_score = len(set(recommendation_tags) & set(item_tags))  # Count overlapping tags
+
+            if match_score > best_match_score:
+                best_match = {"image_url": item["image_url"], "tags": item_tags}
+                best_match_score = match_score
+
+        if best_match:
+            selected_items[category] = best_match
+            used_items.add(best_match["image_url"])  # Mark item as used
+
     return selected_items
 
 
 
 
-
 # OpenAI Recommendation Logic
-def recommend_clothing_with_openai(weather, remaining_events, clothing_items, available_tags):
+def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
+    
     """Use OpenAI to recommend clothing items based on weather, events, and available tags."""
     # Format weather data
     weather_context = f"The current temperature is {weather['temp']}°C with {weather['weather']}."
@@ -148,39 +141,58 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
                 temperature=0.7,
             )
             # Extract and return content from response
+            print("Raw OpenAI Response:", response.choices[0].message.content)
             return response.choices[0].message.content
         except Exception as e:
             raise Exception(f"Error generating clothing recommendation: {str(e)}")
-
-    # if remaining_events
-    tags_context = f"Available tags are: {', '.join(available_tags)}."
     
     # Calculate dominant event category and average event time
     dominant_category = calculate_dominant_event_category(remaining_events)
-    avg_event_time = calculate_average_event_time(remaining_events)
 
-    event_context = " ".join([
-            f"{event.get('title', 'Untitled Event')} at {event.get('location', 'No location specified')}"
-            for event in remaining_events
-    ])
+    # Organize tags into categories
+    category_keywords = {
+        "top": ["👕 T-shirt", "👚 Sweatshirt", "👚 Hoodie", "🧣 Sweater", "🧣 Cardigan"],
+        "bottom": ["👖 Trousers", "👖 Jeans", "👖 Joggers", "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt"],
+        "jacket": ["🧥 Jacket", "🧥 Puffer"],
+        "shoes": ["👟 Sneakers", "👢 Boots"],
+    }
 
-    # Format clothing items
-    clothing_context = "\n".join([
-        f"Clothing Item {i+1}: {item['tags']} (Image: {item['image_url']})"
-        for i, item in enumerate(clothing_items)
-    ])
+    available_tags_by_category = {key: [] for key in category_keywords}
+
+    # Categorize clothing items
+    for item in clothing_items:
+        item_tags = item.get("tags", [])
+        for category, keywords in category_keywords.items():
+            if any(keyword in item_tags for keyword in keywords):
+                available_tags_by_category[category].extend(item_tags)
+    
+    # Remove duplicates and normalize tags
+    available_tags_by_category = {key: list(set(tags)) for key, tags in available_tags_by_category.items()}
+
+    # Debugging: Print available tags by category
+    # print("Available Tags by Category:", available_tags_by_category)
 
     # Create prompt for OpenAI
     prompt = (
-        f"Based on the following information, recommend a top, bottom, shoes, jacket clothing item tailored to the dominant event category:\n"
-        f"- Weather: {weather_context}\n"
-        f"- Events: {event_context}\n"
-        f"- Dominant Category: {dominant_category}\n"
-        f"- Tags: {tags_context}\n"
-        f"- Clothing Items:\n{clothing_context}\n\n"
-        f"Provide the response strictly in this JSON format:\n"
-        f"[{{\"tags\": \"[tag1], [tag2]\", \"image_url\": \"https://example.com/image1.jpg\"}}]"
+        f"The weather is {weather['temp']}°C with {weather['weather']}.\n"
+        f"The dominant event category is '{dominant_category}'.\n"
+        f"Available clothing item tags by category are:\n"
+        f"- Tops: {available_tags_by_category['top']}\n"
+        f"- Bottoms: {available_tags_by_category['bottom']}\n"
+        f"- Jackets: {available_tags_by_category['jacket']}\n"
+        f"- Shoes: {available_tags_by_category['shoes']}\n"
+        f"Recommend one top, one bottom, one jacket, and one pair of shoes, selecting only from these tags.\n"
+        f"Output the recommendation in JSON format like this:\n"
+        f"["
+        f"  {{\"tags\": \"[tag1], [tag2]\", \"category\": \"top\"}},"
+        f"  {{\"tags\": \"[tag3], [tag4]\", \"category\": \"bottom\"}},"
+        f"  {{\"tags\": \"[tag5], [tag6]\", \"category\": \"jacket\"}},"
+        f"  {{\"tags\": \"[tag7], [tag8]\", \"category\": \"shoes\"}}"
+        f"]"
     )
+
+    # print("OpenAI Prompt:", prompt) # Debugging
+
     # maybe for streamlit provide justification, display, don't
 
     # Call OpenAI API
@@ -191,68 +203,63 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
                 {"role": "system", "content": "You are a fashion stylist and clothing analyst."},
                 {"role": "user", "content": prompt},
             ],
-            max_tokens=150,
+            max_tokens=200,
             temperature=0.7,
         )
-        print("OpenAI Prompt:", prompt)
 
-        # Extract the OpenAI response content
-        response_content = response.choices[0].message.content
+        raw_response = response.choices[0].message.content
+        # print("Raw OpenAI Response:", raw_response) # Debugging
 
-        # Parse the content as JSON
-        recommendations = json.loads(response_content)
-        return recommendations
+        # Extract JSON content from response using regex
+        json_match = re.search(r"\[.*\]", raw_response, re.DOTALL)
+        if not json_match:
+            raise ValueError("JSON content not found in OpenAI response.")
+        json_content = json_match.group(0)
+
+        # print("Extracted JSON Content:", json_content)  # Debugging: Print extracted JSON
+
+        # Parse JSON content
+        recommended_tags = json.loads(json_content)
+
+        if not isinstance(recommended_tags, list):
+            raise ValueError("OpenAI response is not a list of recommendations.")
+        
+        return recommended_tags
+    
     except json.JSONDecodeError as e:
+        print("JSON Parsing Error:", e)
         raise Exception(f"Error parsing OpenAI response: {e}")
     except Exception as e:
-        raise Exception(f"Error generating clothing recommendation: {e}")
+        print("General Error:", e)
+        raise Exception(f"Error generating recommendation: {e}")
     
 # Main Logic
 def main():
     weather = fetch_weather()
+    # print("Weather Data:", weather)
+
     remaining_events = fetch_remaining_events()
+    # print("Remaining Events:", remaining_events)
+
     clothing_items = fetch_clothing_items()
+    # print("Clothing Items:", clothing_items)
 
     if not weather:
         print("Weather data is missing.")
-        return None, None  # Return a tuple
+        return None  # Return None
 
     if not clothing_items:
         print("No clothing items available.")
-        return None, None  # Return a tuple
-
-    available_tags = [
-        "🔴 Red", "🔵 Blue", "🟢 Green", "🟤 Brown", "🩷 Pink", "⚫ Black", "⚪ White",
-        "💜 Purple", "🟡 Yellow", "🟠 Orange", "⚪ Silver",
-        "👕 T-shirt", "👚 Sweatshirt", "🧥 Hoodie", "🧣 Sweater", "🧣 Cardigan",
-        "🧥 Jacket", "🧥 Puffer", "👖 Trousers", "👖 Jeans", "👖 Joggers",
-        "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt", "👟 Sneakers", "👢 Boots",
-        "🧵 Cotton", "👖 Denim", "👜 Leather", "🧶 Wool", "🧵 Polyester", "🎾 Mesh",
-        "⬛ Solid", "➖ Striped", "🏁 Checked", "🟫 Camo", "🌸 Festive",
-        "🎽 Casual", "🕶 Streetwear", "👟 Sporty", "🤵 Formal", "🎉 Party", "💼 Work",
-        "🤏 Slim Fit", "📦 Baggy", "🎯 Regular Fit",
-    ]
+        return None  # Return None
 
     try:
-        recommendations = recommend_clothing_with_openai(
-            weather, remaining_events, clothing_items, available_tags
-        )
-
-        if not recommendations:
-            print("No recommendations generated by OpenAI.")
-            return None, None  # Return a tuple
-
-        outfit_images = get_images_from_recommendation(recommendations, clothing_items)
-        if not outfit_images:
-            print("No outfit images matched the recommendations.")
-            return recommendations, []  # Return empty image list
-
-        print("Recommendations:", recommendations)
-        print("Outfit Images:", outfit_images)
-        return recommendations, outfit_images
+        recommendations = recommend_clothing_with_openai(weather, remaining_events, clothing_items)
+        matched_items = get_images_from_recommendation(recommendations, clothing_items)
+        print("Recommendations:", matched_items)
+        return matched_items
     except Exception as e:
-        print(f"Error in recommendation generation: {e}")
-        return None, None  # Ensure a tuple is returned
+        print(f"Error generating recommendation: {e}")
+
 
 if __name__ == "__main__":
     main()
