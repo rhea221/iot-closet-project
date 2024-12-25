@@ -298,7 +298,7 @@ def main():
         recommendations = recommend_clothing_with_openai(weather, remaining_events, clothing_items)
         # Handle general recommendation
         if recommendations["general_recommendation"]:
-            print("General Recommendation:", recommendations["general_recommendation"])
+            print(recommendations["general_recommendation"])
             return recommendations["general_recommendation"]
 
         # Handle outfit recommendation

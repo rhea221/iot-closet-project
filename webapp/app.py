@@ -142,22 +142,21 @@ with tab1:
     if st.button("Get Outfit Recommendation"):
         with st.spinner("Fetching recommendation..."):
             try:
-                # Fetch recommendations and outfit images
+                # Fetch recommendations
                 recommendations = fetch_recommendation()
 
                 if recommendations:
-                    # Check if it's a general recommendation or an outfit recommendation
-                    if recommendations.get("general_recommendation"):
-                        # Display the general recommendation in a text box
+                    # Display general recommendation if present
+                    if recommendations["general_recommendation"]:
                         st.success("General Recommendation Generated!")
                         st.subheader("Your General Recommendation:")
                         st.text_area("Recommendation", recommendations["general_recommendation"], height=100)
-                    elif recommendations.get("outfit_recommendation"):
-                        # Display outfit recommendation images
+                    
+                    # Display outfit recommendation if present
+                    if recommendations["outfit_recommendation"]:
                         st.success("Outfit Recommendation Generated!")
                         st.subheader("Your Outfit Recommendation:")
 
-                        # Display images with rounded corners and cleaner captions
                         for category, item in recommendations["outfit_recommendation"].items():
                             image_html = f"""
                             <div style="text-align: center; margin-bottom: 20px;">
@@ -167,8 +166,6 @@ with tab1:
                             </div>
                             """
                             st.markdown(image_html, unsafe_allow_html=True)
-                    else:
-                        st.warning("No recommendation generated. Please check your data.")
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:
