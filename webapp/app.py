@@ -115,28 +115,30 @@ dark_mode_style = """
 # Add the dark mode style
 st.markdown(dark_mode_style, unsafe_allow_html=True)
 
-
-
 # Recommendation Section
 with tab1:
+    # Add the dark mode style
+    st.markdown(dark_mode_style, unsafe_allow_html=True)
+
     # Landing Section
     with st.container():
+        st.title("Welcome to Your IoT Closet!")
         try:
             # Fetch summarized data
             weather = fetch_weather()
-            st.write("Weather Data Debugging:", weather)  # Add this to debug
             remaining_events = fetch_remaining_events()
 
             if weather and remaining_events:
-                weather_summary = f"The current temperature is {weather.get("temp", 'N/A')}°C with {weather.get("weather", 'unknown conditions')}."
+                weather_summary = f"The current temperature is {weather['temp']}°C with {weather['weather']}."
                 event_summary = f"You have {len(remaining_events)} event(s) left today."
             else:
                 weather_summary = "Weather data is currently unavailable."
-                event_summary = "You have no more events for the rest of today :)."
+                event_summary = "No events found for today."
 
             st.subheader(f"Hello! {weather_summary} {event_summary}")
         except Exception as e:
             st.error(f"Error fetching data: {e}")
+
 
     if st.button("Get Outfit Recommendation"):
         with st.spinner("Fetching recommendation..."):
