@@ -97,6 +97,7 @@ tab1, tab2, tab3 = st.tabs(["Recommendations", "My Closet", "My Database"])
 
 # Recommendations --------------------------------
 # Recommendations --------------------------------
+# Recommendations --------------------------------
 with tab1:
     st.header("Recommendations")
 
@@ -111,17 +112,10 @@ with tab1:
                     st.success("Recommendation Generated!")
                     st.subheader("Your Outfit Recommendation:")
                     st.text_area("Raw OpenAI Response:", json.dumps(recommendations, indent=2))
+                    
+                    # Display images with tags
                     for item in outfit_images:
                         st.image(item["image_url"], caption=", ".join(item["tags"]), use_column_width=True)
-
-                    
-                    # Display raw OpenAI response in a text box
-                    st.subheader("OpenAI Response Debug:")
-                    st.text_area(
-                        label="OpenAI Response",
-                        value=str(recommendations),
-                        height=200
-                    )
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:
