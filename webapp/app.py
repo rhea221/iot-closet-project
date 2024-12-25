@@ -271,6 +271,9 @@ with tab2:
                 st.session_state.clear()  # Clear all session state to reset the app
                 st.experimental_rerun()  # Rerun the app to start fresh
 
+
+    st.subheader("Laundry Management")
+
     clothes = fetch_all_clothes()
 
     if clothes:
@@ -287,8 +290,29 @@ with tab2:
         # Send selected items to laundry
         if st.button("Send to Laundry"):
             send_to_laundry(selected_for_laundry)
-    else:
-        st.warning("No clothes found in your closet.")
+        else:
+            st.warning("No clothes found in your closet.")
+
+        # Fetch items currently in laundry
+        try:
+            laundry_items = supabase.table("closet-items").select("*").eq("status", "laundry").execute().data
+            if not laundry_items:
+                st.info("No items are currently in the laundry.")
+            else:
+                st.write("Select items to return to the closet:")
+                selected_items = []
+                for item in laundry_items:
+                    if st.checkbox(f"{item['tags']}", key=f"laundry-{item['id']}"):
+                        selected_items.append(item)
+
+            # Button to return selected items
+            if st.button("Return to Closet"):
+                if selected_items:
+                    return_from_laundry(selected_items)
+                else:
+                    st.warning("Please select at least one item to return.")
+        except Exception as e:
+            st.error(f"Error fetching laundry items: {e}")
 
 
 # Database ------------------------------------------
