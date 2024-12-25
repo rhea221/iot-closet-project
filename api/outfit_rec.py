@@ -57,7 +57,7 @@ def fetch_remaining_events():
 
 def fetch_clothing_items():
     """Fetch clothing items stored in the Supabase closet-items table."""
-    response = supabase.table("closet-items").select("*").neq("status", "laundry").execute()
+    response = supabase.table("closet-items").select("*").execute()
     return response.data or []
 
 

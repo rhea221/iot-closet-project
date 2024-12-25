@@ -23,6 +23,7 @@ load_dotenv(dotenv_path="config/.env")
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
 
+
 if not supabase_url or not supabase_key:
     st.error("Supabase credentials are missing. Check your environment variables.")
     st.stop()
@@ -32,21 +33,6 @@ supabase: Client = create_client(supabase_url, supabase_key)
 def generate_unique_filename(extension):
     """Generate a unique filename using UUID."""
     return f"{uuid.uuid4()}.{extension}"
-
-def fetch_all_clothes():
-    """Fetch all clothes from the closet-items table."""
-    response = supabase.table("closet-items").select("*").execute()
-    return response.data or []
-
-def send_to_laundry(selected_items):
-    """Update the status of selected items to 'laundry'."""
-    for item in selected_items:
-        supabase.table("closet-items").update({"status": "laundry"}).eq("id", item["id"]).execute()
-
-def return_from_laundry(selected_items):
-    """Update the status of selected items back to 'closet'."""
-    for item in selected_items:
-        supabase.table("closet-items").update({"status": "closet"}).eq("id", item["id"]).execute()
 
 # My Closet --------------------------------------
 def upload_image_to_supabase(file, file_name):
@@ -129,58 +115,55 @@ dark_mode_style = """
 # Add the dark mode style
 st.markdown(dark_mode_style, unsafe_allow_html=True)
 
-# Landing Section
-with st.container():
-    st.title("Welcome to Your IoT Closet!")
-    try:
-        # Fetch summarized data
-        weather = fetch_weather()
-        remaining_events = fetch_remaining_events()
-
-        if weather and remaining_events:
-            weather_summary = f"The current temperature is {weather['temp']}°C with {weather['weather']}."
-            event_summary = f"You have {len(remaining_events)} event(s) left today."
-        else:
-            weather_summary = "Weather data is currently unavailable."
-            event_summary = "No events found for today."
-
-        st.subheader(f"Hello! {weather_summary} {event_summary}")
-    except Exception as e:
-        st.error(f"Error fetching data: {e}")
-
 # Recommendation Section
 with tab1:
-    st.header("Recommendations")
+    # Add the dark mode style
+    st.markdown(dark_mode_style, unsafe_allow_html=True)
 
-    # Trigger Recommendation System
+    # Landing Section
+    with st.container():
+        try:
+            # Fetch summarized data
+            weather = fetch_weather()
+            remaining_events = fetch_remaining_events()
+
+            if weather and remaining_events:
+                weather_summary = f"The current temperature is {weather['temp']}°C with {weather['weather']}."
+                event_summary = f"You have {len(remaining_events)} event(s) left today."
+            else:
+                weather_summary = "Weather data is currently unavailable."
+                event_summary = "No events found for today."
+
+            st.subheader(f"Hello! {weather_summary} {event_summary}")
+        except Exception as e:
+            st.error(f"Error fetching data: {e}")
+
+
     if st.button("Get Outfit Recommendation"):
         with st.spinner("Fetching recommendation..."):
             try:
-                # Fetch recommendations and outfit images
                 recommendations = fetch_recommendation()
 
-                if recommendations:
-                    if "general_recommendation" in recommendations and recommendations["general_recommendation"]:
-                        st.text_area("General Recommendation", recommendations["general_recommendation"], height=100)
-                    if "outfit_recommendation" in recommendations and recommendations["outfit_recommendation"]:
-                        st.success("Recommendation Generated!")
-                        st.subheader("Your Outfit Recommendation:")
-
-                        # Display images with rounded corners and cleaner captions
-                        for category, item in recommendations["outfit_recommendation"].items():
-                            image_html = f"""
-                            <div style="text-align: center; margin-bottom: 20px;">
-                                <img src="{item['image_url']}" style="width: 200px; height: auto; border-radius: 15px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);"/>
-                                <p style="margin-top: 10px; font-size: 16px; font-weight: bold; color: #f1f1f1;">{category.capitalize()}</p>
-                                <p style="font-size: 14px; color: #c1c1c1;">{', '.join(item['tags'])}</p>
-                            </div>
-                            """
-                            st.markdown(image_html, unsafe_allow_html=True)
+                # Handle general recommendation
+                if isinstance(recommendations, str):
+                    st.success("Recommendation Generated!")
+                    st.text_area("General Recommendation", recommendations, height=150)
+                elif recommendations and isinstance(recommendations, dict):
+                    st.success("Recommendation Generated!")
+                    st.subheader("Your Outfit Recommendation:")
+                    for category, item in recommendations.items():
+                        image_html = f"""
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <img src="{item['image_url']}" style="width: 200px; height: auto; border-radius: 15px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);"/>
+                            <p style="margin-top: 10px; font-size: 16px; font-weight: bold; color: #f1f1f1;">{category.capitalize()}</p>
+                            <p style="font-size: 14px; color: #c1c1c1;">{', '.join(item['tags'])}</p>
+                        </div>
+                        """
+                        st.markdown(image_html, unsafe_allow_html=True)
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:
                 st.error(f"Error generating recommendation: {e}")
-
 
 # My Closet --------------------------------------
 # Fetch all clothing items
@@ -291,11 +274,16 @@ with tab2:
 
     st.subheader("My Closet")
 
+    # Fetch all clothing items
     clothes = fetch_all_clothes()
 
     if clothes:
+        # Display clothes not in laundry
+        available_clothes = [item for item in clothes if item.get("status") != "laundry"]
         selected_for_laundry = []
-        for item in clothes:
+
+        st.write("Available Clothes:")
+        for item in available_clothes:
             col1, col2 = st.columns([1, 4])
             with col1:
                 st.image(item["image_url"], width=100, caption=" ")
@@ -307,35 +295,34 @@ with tab2:
         # Send selected items to laundry
         if st.button("Send to Laundry"):
             send_to_laundry(selected_for_laundry)
-            st.experimental_rerun()
+            # Immediately update session state to remove items sent to laundry
+            for item in selected_for_laundry:
+                item["status"] = "laundry"
+            st.experimental_rerun()  # Rerun the app to reflect updated data
 
-        # Fetch items currently in laundry
-        try:
-            laundry_items = supabase.table("closet-items").select("*").eq("status", "laundry").execute().data
-            if not laundry_items:
-                st.info("No items are currently in the laundry.")
-            else:
-                st.write("Select items to return to closet:")
-                selected_items = []
-                for item in laundry_items:
-                    col1, col2 = st.columns([1, 4])
-                    with col1:
-                        st.image(item["image_url"], width=100, caption=" ")
-                    with col2:
-                        checkbox = st.checkbox(f"{item['tags']}", key=f"laundry-{item['id']}")
-                        if checkbox:
-                            selected_items.append(item)
+    # Fetch items currently in laundry
+    try:
+        laundry_items = [item for item in clothes if item.get("status") == "laundry"]
+        if not laundry_items:
+            st.info("No items are currently in the laundry.")
+        else:
+            st.write("Laundry Items:")
+            selected_items = []
+            for item in laundry_items:
+                col1, col2 = st.columns([1, 4])
+                with col1:
+                    st.image(item["image_url"], width=100, caption=" ")
+                with col2:
+                    checkbox = st.checkbox(f"{item['tags']}", key=f"laundry-{item['id']}")
+                    if checkbox:
+                        selected_items.append(item)
 
-                # Button to return selected items
-                if st.button("Return to Closet"):
-                    if selected_items:
-                        return_from_laundry(selected_items)
-                        st.experimental_rerun()
-                    else:
-                        st.warning("Please select at least one item to return.")
-        except Exception as e:
-            st.error(f"Error fetching laundry items: {e}")
-
+            # Button to return selected items
+            if st.button("Return to Closet"):
+                if selected_items:
+                    return_from_laundry(selected_items)
+    except Exception as e:
+        st.error(f"Error fetching laundry items: {e}")
 
 
 # Database ------------------------------------------
