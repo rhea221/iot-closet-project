@@ -164,6 +164,35 @@ with tab1:
                 st.error(f"Error generating recommendation: {e}")
 
 # My Closet --------------------------------------
+# Fetch all clothing items
+def fetch_all_clothes():
+    """Fetch all clothing items from Supabase."""
+    try:
+        response = supabase.table("closet-items").select("*").execute()
+        return response.data or []
+    except Exception as e:
+        st.error(f"Error fetching clothes: {e}")
+        return []
+
+# Update laundry status
+def send_to_laundry(selected_items):
+    """Mark selected items as 'laundry' in Supabase."""
+    try:
+        for item in selected_items:
+            supabase.table("closet-items").update({"status": "laundry"}).match({"id": item["id"]}).execute()
+        st.success("Selected items sent to laundry!")
+    except Exception as e:
+        st.error(f"Error sending items to laundry: {e}")
+
+def return_from_laundry(selected_laundry_items):
+    """Update the status of selected laundry items to make them available."""
+    try:
+        for item in selected_laundry_items:
+            supabase.table("closet-items").update({"status": None}).eq("id", item["id"]).execute()
+        st.success("Selected items returned to the closet!")
+    except Exception as e:
+        st.error(f"Error returning items from laundry: {e}")
+
 with tab2:
     st.header("My Closet")
 
@@ -241,6 +270,26 @@ with tab2:
             if st.button("Start Over"):
                 st.session_state.clear()  # Clear all session state to reset the app
                 st.experimental_rerun()  # Rerun the app to start fresh
+
+    clothes = fetch_all_clothes()
+
+    if clothes:
+        selected_for_laundry = []
+        for item in clothes:
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                st.image(item["image_url"], width=100, caption=" ")
+            with col2:
+                checkbox = st.checkbox(f"ID: {item['id']} | Tags: {', '.join(item['tags'])}", key=f"checkbox_{item['id']}")
+                if checkbox:
+                    selected_for_laundry.append(item)
+
+        # Send selected items to laundry
+        if st.button("Send to Laundry"):
+            send_to_laundry(selected_for_laundry)
+    else:
+        st.warning("No clothes found in your closet.")
+
 
 # Database ------------------------------------------
 with tab3:

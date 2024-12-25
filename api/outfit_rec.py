@@ -148,8 +148,7 @@ def get_images_from_recommendation(recommendations, clothing_items):
         if best_match:
             selected_items[category] = best_match
             used_items.add(best_match["image_url"])  # Mark item as used
-        else:
-            print(f"No suitable match found for category '{category}'.")
+        
 
     return selected_items
 
