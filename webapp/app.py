@@ -146,19 +146,29 @@ with tab1:
                 recommendations = fetch_recommendation()
 
                 if recommendations:
-                    st.success("Recommendation Generated!")
-                    st.subheader("Your Outfit Recommendation:")
+                    # Check if it's a general recommendation or an outfit recommendation
+                    if recommendations.get("general_recommendation"):
+                        # Display the general recommendation in a text box
+                        st.success("General Recommendation Generated!")
+                        st.subheader("Your General Recommendation:")
+                        st.text_area("Recommendation", recommendations["general_recommendation"], height=100)
+                    elif recommendations.get("outfit_recommendation"):
+                        # Display outfit recommendation images
+                        st.success("Outfit Recommendation Generated!")
+                        st.subheader("Your Outfit Recommendation:")
 
-                    # Display images with rounded corners and cleaner captions
-                    for category, item in recommendations.items():
-                        image_html = f"""
-                        <div style="text-align: center; margin-bottom: 20px;">
-                            <img src="{item['image_url']}" style="width: 200px; height: auto; border-radius: 15px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);"/>
-                            <p style="margin-top: 10px; font-size: 16px; font-weight: bold; color: #f1f1f1;">{category.capitalize()}</p>
-                            <p style="font-size: 14px; color: #c1c1c1;">{', '.join(item['tags'])}</p>
-                        </div>
-                        """
-                        st.markdown(image_html, unsafe_allow_html=True)
+                        # Display images with rounded corners and cleaner captions
+                        for category, item in recommendations["outfit_recommendation"].items():
+                            image_html = f"""
+                            <div style="text-align: center; margin-bottom: 20px;">
+                                <img src="{item['image_url']}" style="width: 200px; height: auto; border-radius: 15px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);"/>
+                                <p style="margin-top: 10px; font-size: 16px; font-weight: bold; color: #f1f1f1;">{category.capitalize()}</p>
+                                <p style="font-size: 14px; color: #c1c1c1;">{', '.join(item['tags'])}</p>
+                            </div>
+                            """
+                            st.markdown(image_html, unsafe_allow_html=True)
+                    else:
+                        st.warning("No recommendation generated. Please check your data.")
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:
