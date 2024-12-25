@@ -11,7 +11,7 @@ import sys
 
 # Add the project root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from api.outfit_rec import main as fetch_recommendation
+from api.outfit_rec import main as fetch_recommendation, fetch_weather, fetch_remaining_events
 
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
@@ -102,16 +102,6 @@ dark_mode_style = """
     body {
         background-color: #1e1e1e;
         color: #f1f1f1;
-    }
-    .stButton > button {
-        background-color: #333;
-        color: #f1f1f1;
-        border-radius: 5px;
-        border: 1px solid #555;
-    }
-    .stButton > button:hover {
-        background-color: #444;
-        color: #ffffff;
     }
     h1, h2, h3, h4, h5, h6 {
         color: #f1f1f1;
