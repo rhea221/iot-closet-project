@@ -112,7 +112,7 @@ with tab1:
                     
                     # Display images with tags
                     for category, item in recommendations.items():
-                        st.image(item["image_url"], caption=f"{category.capitalize()}: {', '.join(item['tags'])}", use_column_width=True)
+                        st.image(item["image_url"], caption=f"{category.capitalize()}: {', '.join(item['tags'])}", use_container_width=True)
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:

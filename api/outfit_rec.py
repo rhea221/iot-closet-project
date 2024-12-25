@@ -84,13 +84,14 @@ def calculate_dominant_event_category(events):
 
 
 def get_images_from_recommendation(recommendations, clothing_items):
+def get_images_from_recommendation(recommendations, clothing_items):
     """Retrieve clothing items from Supabase matching recommended tags and categories."""
     selected_items = {}
     used_items = set()  # Track already selected items to avoid duplicates
 
     for recommendation in recommendations:
         category = recommendation.get("category")
-        recommendation_tags = recommendation.get("tags", "").split(", ")  # Split tags into a list
+        recommendation_tags = recommendation.get("tags", "").split(", ")
         best_match = None
         best_match_score = 0
 
@@ -99,6 +100,15 @@ def get_images_from_recommendation(recommendations, clothing_items):
                 continue  # Skip already used items
 
             item_tags = item.get("tags", [])
+            if category == "top" and not any(tag in ["👕 T-shirt", "👚 Sweatshirt", "👚 Hoodie", "🧣 Sweater", "🧣 Cardigan"] for tag in item_tags):
+                continue  # Ensure item matches the "top" category
+            if category == "bottom" and not any(tag in ["👖 Trousers", "👖 Jeans", "👖 Joggers", "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt"] for tag in item_tags):
+                continue  # Ensure item matches the "bottom" category
+            if category == "jacket" and not any(tag in ["🧥 Jacket", "🧥 Puffer"] for tag in item_tags):
+                continue  # Ensure item matches the "jacket" category
+            if category == "shoes" and not any(tag in ["👟 Sneakers", "👢 Boots"] for tag in item_tags):
+                continue  # Ensure item matches the "shoes" category
+
             match_score = len(set(recommendation_tags) & set(item_tags))  # Count overlapping tags
 
             if match_score > best_match_score:
