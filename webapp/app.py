@@ -194,8 +194,6 @@ def return_from_laundry(selected_laundry_items):
         st.error(f"Error returning items from laundry: {e}")
 
 with tab2:
-    st.header("My Closet")
-
     # Upload Image Section
     uploaded_file = st.file_uploader("Upload a clothing item...", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
@@ -272,7 +270,7 @@ with tab2:
                 st.experimental_rerun()  # Rerun the app to start fresh
 
 
-    st.subheader("Laundry Management")
+    st.subheader("My Closet")
 
     clothes = fetch_all_clothes()
 
@@ -297,11 +295,16 @@ with tab2:
             if not laundry_items:
                 st.info("No items are currently in the laundry.")
             else:
-                st.write("Select items to return to the closet:")
+                st.write("Select items to return to closet:")
                 selected_items = []
                 for item in laundry_items:
-                    if st.checkbox(f"{item['tags']}", key=f"laundry-{item['id']}"):
-                        selected_items.append(item)
+                    col1, col2 = st.columns([1, 4])
+                    with col1:
+                        st.image(item["image_url"], width=100, caption=" ")
+                    with col2:
+                        checkbox = st.checkbox(f"{item['tags']}", key=f"laundry-{item['id']}")
+                        if checkbox:
+                            selected_items.append(item)
 
             # Button to return selected items
             if st.button("Return to Closet"):
