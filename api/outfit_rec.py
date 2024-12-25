@@ -84,7 +84,6 @@ def calculate_dominant_event_category(events):
 
 
 def get_images_from_recommendation(recommendations, clothing_items):
-def get_images_from_recommendation(recommendations, clothing_items):
     """Retrieve clothing items from Supabase matching recommended tags and categories."""
     selected_items = {}
     used_items = set()  # Track already selected items to avoid duplicates
@@ -104,7 +103,7 @@ def get_images_from_recommendation(recommendations, clothing_items):
                 continue  # Ensure item matches the "top" category
             if category == "bottom" and not any(tag in ["👖 Trousers", "👖 Jeans", "👖 Joggers", "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt"] for tag in item_tags):
                 continue  # Ensure item matches the "bottom" category
-            if category == "jacket" and not any(tag in ["🧥 Jacket", "🧥 Puffer"] for tag in item_tags):
+            if category == "jacket" and not any(tag in ["🧥 Jacket", "🧥 Puffer", "🧥 Blazer"] for tag in item_tags):
                 continue  # Ensure item matches the "jacket" category
             if category == "shoes" and not any(tag in ["👟 Sneakers", "👢 Boots"] for tag in item_tags):
                 continue  # Ensure item matches the "shoes" category
@@ -163,7 +162,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
     category_keywords = {
         "top": ["👕 T-shirt", "👚 Sweatshirt", "👚 Hoodie", "🧣 Sweater", "🧣 Cardigan"],
         "bottom": ["👖 Trousers", "👖 Jeans", "👖 Joggers", "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt"],
-        "jacket": ["🧥 Jacket", "🧥 Puffer"],
+        "jacket": ["🧥 Jacket", "🧥 Puffer", "🧥 Blazer"],
         "shoes": ["👟 Sneakers", "👢 Boots"],
     }
 
