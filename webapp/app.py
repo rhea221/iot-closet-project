@@ -96,8 +96,6 @@ st.title("IoT Closet Manager")
 tab1, tab2, tab3 = st.tabs(["Recommendations", "My Closet", "My Database"])
 
 # Recommendations --------------------------------
-# Recommendations --------------------------------
-# Recommendations --------------------------------
 with tab1:
     st.header("Recommendations")
 
@@ -106,21 +104,19 @@ with tab1:
         with st.spinner("Fetching recommendation..."):
             try:
                 # Fetch recommendations and outfit images
-                recommendations, outfit_images = fetch_recommendation()
+                recommendations = fetch_recommendation()
 
                 if recommendations:
                     st.success("Recommendation Generated!")
                     st.subheader("Your Outfit Recommendation:")
-                    st.text_area("Raw OpenAI Response:", json.dumps(recommendations, indent=2))
                     
                     # Display images with tags
-                    for item in outfit_images:
-                        st.image(item["image_url"], caption=", ".join(item["tags"]), use_column_width=True)
+                    for category, item in recommendations.items():
+                        st.image(item["image_url"], caption=f"{category.capitalize()}: {', '.join(item['tags'])}", use_column_width=True)
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:
                 st.error(f"Error generating recommendation: {e}")
-
 
 
 # My Closet --------------------------------------
