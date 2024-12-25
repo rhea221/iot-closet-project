@@ -272,61 +272,66 @@ with tab2:
 
     st.subheader("My Closet")
 
-    # Fetch all clothing items
-    clothes = fetch_all_clothes()
+# Initialize session state for tracking laundry items
+if "laundry_items" not in st.session_state:
+    st.session_state["laundry_items"] = []  # List to track items in the laundry
 
-    if clothes:
-        # Display clothes not in laundry
-        available_clothes = [item for item in clothes if item.get("status") != "laundry"]
-        selected_for_laundry = []
+# Fetch all clothing items
+clothes = fetch_all_clothes()
 
-        st.write("Available Clothes:")
-        for item in available_clothes:
-            col1, col2 = st.columns([1, 4])
-            with col1:
-                st.image(item["image_url"], width=100, caption=" ")
-            with col2:
-                checkbox = st.checkbox(f"ID: {item['id']} | Tags: {', '.join(item['tags'])}", key=f"checkbox_{item['id']}")
-                if checkbox:
-                    selected_for_laundry.append(item)
+if clothes:
+    # Filter items for display
+    available_clothes = [item for item in clothes if item["id"] not in st.session_state["laundry_items"]]
+    selected_for_laundry = []
 
-        # Send selected items to laundry
-        if st.button("Send to Laundry"):
+    st.write("Available Clothes:")
+    for item in available_clothes:
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.image(item["image_url"], width=100, caption=" ")
+        with col2:
+            checkbox = st.checkbox(f"ID: {item['id']} | Tags: {', '.join(item['tags'])}", key=f"checkbox_{item['id']}")
+            if checkbox:
+                selected_for_laundry.append(item)
+
+    # Send selected items to laundry
+    if st.button("Send to Laundry"):
+        if selected_for_laundry:
+            # Update session state
+            st.session_state["laundry_items"].extend([item["id"] for item in selected_for_laundry])
             send_to_laundry(selected_for_laundry)
-            # Immediately update session state to remove items sent to laundry
-            for item in selected_for_laundry:
-                item["status"] = "laundry"
-            st.experimental_rerun()  # Rerun the app to reflect updated data
-
-    # Fetch items currently in laundry
-    try:
-        laundry_items = [item for item in clothes if item.get("status") == "laundry"]
-        if not laundry_items:
-            st.info("No items are currently in the laundry.")
         else:
-            st.write("Laundry Items:")
-            selected_items = []
-            for item in laundry_items:
-                col1, col2 = st.columns([1, 4])
-                with col1:
-                    st.image(item["image_url"], width=100, caption=" ")
-                with col2:
-                    checkbox = st.checkbox(f"{item['tags']}", key=f"laundry-{item['id']}")
-                    if checkbox:
-                        selected_items.append(item)
+            st.warning("No items selected to send to laundry.")
 
-            # Button to return selected items
-            if st.button("Return to Closet"):
-                if selected_items:
-                    return_from_laundry(selected_items)
-                    # Immediately update session state to reflect items moved back to the closet
-                    for item in selected_items:
-                        item["status"] = "closet"
-                    st.experimental_rerun()  # Rerun the app to reflect updated data
-                else:
-                    st.warning("Please select at least one item to return.")
-    except Exception as e:
-        st.error(f"Error fetching laundry items: {e}")
+# Display items currently in laundry
+laundry_ids = st.session_state["laundry_items"]
+laundry_items = [item for item in clothes if item["id"] in laundry_ids]
+
+if laundry_items:
+    st.write("Laundry Items:")
+    selected_to_return = []
+    for item in laundry_items:
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            st.image(item["image_url"], width=100, caption=" ")
+        with col2:
+            checkbox = st.checkbox(f"{item['tags']}", key=f"laundry-{item['id']}")
+            if checkbox:
+                selected_to_return.append(item)
+
+    # Button to return selected items
+    if st.button("Return to Closet"):
+        if selected_to_return:
+            # Update session state
+            for item in selected_to_return:
+                st.session_state["laundry_items"].remove(item["id"])
+            return_from_laundry(selected_to_return)
+            st.success("Items returned to closet!")
+        else:
+            st.warning("No items selected to return.")
+else:
+    st.info("No items are currently in the laundry.")
+
 
 
 # Database ------------------------------------------
