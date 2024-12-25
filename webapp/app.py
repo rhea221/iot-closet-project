@@ -124,6 +124,7 @@ with tab1:
         try:
             # Fetch summarized data
             weather = fetch_weather()
+            st.write("Weather Data Debugging:", weather)  # Add this to debug
             remaining_events = fetch_remaining_events()
 
             if weather and remaining_events:
@@ -131,7 +132,7 @@ with tab1:
                 event_summary = f"You have {len(remaining_events)} event(s) left today."
             else:
                 weather_summary = "Weather data is currently unavailable."
-                event_summary = "No events found for today."
+                event_summary = "You have no more events for the rest of today :)."
 
             st.subheader(f"Hello! {weather_summary} {event_summary}")
         except Exception as e:
