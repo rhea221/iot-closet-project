@@ -127,8 +127,9 @@ with tab1:
             weather = fetch_weather()
             remaining_events = fetch_remaining_events()
 
-            if weather and remaining_events:
+            if weather:
                 weather_summary = f"The current temperature is {weather['temp']}°C with {weather['weather']}."
+            if remaining_events:
                 event_summary = f"You have {len(remaining_events)} event(s) left today."
             else:
                 weather_summary = "Weather data is currently unavailable."
