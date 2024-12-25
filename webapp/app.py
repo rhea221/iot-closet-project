@@ -110,15 +110,21 @@ with tab1:
                     st.success("Recommendation Generated!")
                     st.subheader("Your Outfit Recommendation:")
                     
-                    # Display images with tags
+                    # Display images with rounded corners and cleaner captions
                     for category, item in recommendations.items():
-                        st.image(item["image_url"], caption=f"{category.capitalize()}: {', '.join(item['tags'])}", use_container_width=True)
+                        image_html = f"""
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <img src="{item['image_url']}" style="width: 200px; height: auto; border-radius: 15px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);"/>
+                            <p style="margin-top: 10px; font-size: 16px; font-weight: bold; color: #333;">{category.capitalize()}</p>
+                            <p style="font-size: 14px; color: #555;">{', '.join(item['tags'])}</p>
+                        </div>
+                        """
+                        st.markdown(image_html, unsafe_allow_html=True)
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:
                 st.error(f"Error generating recommendation: {e}")
-
-
+                
 # My Closet --------------------------------------
 with tab2:
     st.header("My Closet")
