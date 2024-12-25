@@ -70,7 +70,8 @@ def calculate_dominant_event_category(events):
         "social": ["party", "club", "dinner", "gathering", "games"],
         "sport": ["gym", "bouldering", "running", "exercise"],
         "leisure": ["movie", "museum", "musical", "picnic", "festival"],
-        "appointment": ["appointment"]
+        "appointment": ["appointment"],
+        "festive": ["christmas", "birthday", "new years"]
     }
     
     university_locations = ["Dyson Building", "Library", "Imperial College London"]
@@ -81,13 +82,14 @@ def calculate_dominant_event_category(events):
     for event in events:
         title = event.get("title", "").lower()
         location = str(event.get("location", "")).lower()  # Ensure location is a string
+        duration = event.get("duration", 0)  # Duration in hours (default 0 if missing)
 
         if any(loc.lower() in location for loc in university_locations):
-            category_count["university"] += 1
+            category_count["university"] += duration
 
         for category, keywords in categories.items():
             if any(keyword in title for keyword in keywords):
-                category_count[category] += 1
+                category_count[category] += duration
                 if category == "sport":
                     sports_priority = True  # Mark if a sports event is present
 
@@ -199,27 +201,27 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
     # Create prompt for OpenAI
     prompt = (
         f"The weather is {weather['temp']}°C with {weather['weather']}.\n"
-    f"The dominant event category is '{dominant_category}'.\n"
-    f"Available clothing item tags by category are:\n"
-    f"- Tops: {available_tags_by_category['top']}\n"
-    f"- Bottoms: {available_tags_by_category['bottom']}\n"
-    f"- Jackets: {available_tags_by_category['jacket']}\n"
-    f"- Shoes: {available_tags_by_category['shoes']}\n"
-    f"Available attributes:\n"
-    f"- Colors: {attributes['color']}\n"
-    f"- Materials: {attributes['material']}\n"
-    f"- Patterns: {attributes['pattern']}\n"
-    f"- Styles: {attributes['style']}\n"
-    f"- Fits: {attributes['fit']}\n"
-    f"Recommend one top, one bottom, one jacket, and one pair of shoes, ensuring they align with the weather, the dominant event category, and these attributes.\n"
-    f"Output the recommendation in JSON format like this:\n"
-    f"["
-    f"  {{\"tags\": \"[tag1], [tag2]\", \"category\": \"top\"}},"
-    f"  {{\"tags\": \"[tag3], [tag4]\", \"category\": \"bottom\"}},"
-    f"  {{\"tags\": \"[tag5], [tag6]\", \"category\": \"jacket\"}},"
-    f"  {{\"tags\": \"[tag7], [tag8]\", \"category\": \"shoes\"}}"
-    f"]"
-    )
+        f"The dominant event category is '{dominant_category}'.\n"
+        f"Available clothing item tags by category are:\n"
+        f"- Tops: {available_tags_by_category['top']}\n"
+        f"- Bottoms: {available_tags_by_category['bottom']}\n"
+        f"- Jackets: {available_tags_by_category['jacket']}\n"
+        f"- Shoes: {available_tags_by_category['shoes']}\n"
+        f"Available attributes:\n"
+        f"- Colors: {attributes['color']}\n"
+        f"- Materials: {attributes['material']}\n"
+        f"- Patterns: {attributes['pattern']}\n"
+        f"- Styles: {attributes['style']}\n"
+        f"- Fits: {attributes['fit']}\n"
+        f"Recommend one top, one bottom, one jacket, and one pair of shoes, ensuring they align with the weather, the dominant event category, and these attributes.\n"
+        f"Output the recommendation in JSON format like this:\n"
+        f"["
+        f"  {{\"tags\": \"[tag1], [tag2]\", \"category\": \"top\"}},"
+        f"  {{\"tags\": \"[tag3], [tag4]\", \"category\": \"bottom\"}},"
+        f"  {{\"tags\": \"[tag5], [tag6]\", \"category\": \"jacket\"}},"
+        f"  {{\"tags\": \"[tag7], [tag8]\", \"category\": \"shoes\"}}"
+        f"]"
+        )
 
     # print("OpenAI Prompt:", prompt) # Debugging
 
