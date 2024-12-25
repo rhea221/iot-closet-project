@@ -272,11 +272,16 @@ with tab2:
 
     st.subheader("My Closet")
 
+    # Fetch all clothing items
     clothes = fetch_all_clothes()
 
     if clothes:
+        # Display clothes not in laundry
+        available_clothes = [item for item in clothes if item.get("status") != "laundry"]
         selected_for_laundry = []
-        for item in clothes:
+
+        st.write("Available Clothes:")
+        for item in available_clothes:
             col1, col2 = st.columns([1, 4])
             with col1:
                 st.image(item["image_url"], width=100, caption=" ")
@@ -288,32 +293,34 @@ with tab2:
         # Send selected items to laundry
         if st.button("Send to Laundry"):
             send_to_laundry(selected_for_laundry)
+            # Immediately update session state to remove items sent to laundry
+            for item in selected_for_laundry:
+                item["status"] = "laundry"
+            st.experimental_rerun()  # Rerun the app to reflect updated data
 
-        # Fetch items currently in laundry
-        try:
-            laundry_items = supabase.table("closet-items").select("*").eq("status", "laundry").execute().data
-            if not laundry_items:
-                st.info("No items are currently in the laundry.")
-            else:
-                st.write("Select items to return to closet:")
-                selected_items = []
-                for item in laundry_items:
-                    col1, col2 = st.columns([1, 4])
-                    with col1:
-                        st.image(item["image_url"], width=100, caption=" ")
-                    with col2:
-                        checkbox = st.checkbox(f"{item['tags']}", key=f"laundry-{item['id']}")
-                        if checkbox:
-                            selected_items.append(item)
+    # Fetch items currently in laundry
+    try:
+        laundry_items = [item for item in clothes if item.get("status") == "laundry"]
+        if not laundry_items:
+            st.info("No items are currently in the laundry.")
+        else:
+            st.write("Laundry Items:")
+            selected_items = []
+            for item in laundry_items:
+                col1, col2 = st.columns([1, 4])
+                with col1:
+                    st.image(item["image_url"], width=100, caption=" ")
+                with col2:
+                    checkbox = st.checkbox(f"{item['tags']}", key=f"laundry-{item['id']}")
+                    if checkbox:
+                        selected_items.append(item)
 
             # Button to return selected items
             if st.button("Return to Closet"):
                 if selected_items:
                     return_from_laundry(selected_items)
-                else:
-                    st.warning("Please select at least one item to return.")
-        except Exception as e:
-            st.error(f"Error fetching laundry items: {e}")
+    except Exception as e:
+        st.error(f"Error fetching laundry items: {e}")
 
 
 # Database ------------------------------------------
