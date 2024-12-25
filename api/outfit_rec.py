@@ -159,7 +159,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
     if not remaining_events:
         # No events left for today, generate a weather-based quick statement
         prompt = (
-            f"Give me a light-hearted summary of the weather and recommendation on what I should wear, and short justification on the recommendation, in a very short paragraph.:\n"
+            f"Give me a light-hearted general recommendation based on the weather, in a very short paragraph (maximum 3 lines).:\n"
             f"- Weather: {weather_context}\n"
         )
 
@@ -174,61 +174,69 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
                 max_tokens=100,
                 temperature=0.7,
             )
-            # Extract and return content from response
-            print("Raw OpenAI Response:", response.choices[0].message.content)
-            return response.choices[0].message.content
+            # Extract general recommendation text
+            general_recommendation = response.choices[0].message.content.strip()
+            # print("Raw OpenAI Response:", general_recommendation)
+
+            # Return a structured format for compatibility
+            return {
+                "general_recommendation": general_recommendation,
+                "outfit_recommendation": None
+            }
+
         except Exception as e:
             raise Exception(f"Error generating clothing recommendation: {str(e)}")
     
-    # Calculate dominant event category and average event time
-    dominant_category = calculate_dominant_event_category(remaining_events)
+    # For cases with remaining events, process outfit recommendations
+    try:
+        # Calculate dominant event category and average event time
+        dominant_category = calculate_dominant_event_category(remaining_events)
 
-    available_tags_by_category = {key: [] for key in category_keywords}
+        available_tags_by_category = {key: [] for key in category_keywords}
 
-    # Categorize clothing items
-    for item in clothing_items:
-        item_tags = item.get("tags", [])
-        for category, keywords in category_keywords.items():
-            if any(keyword in item_tags for keyword in keywords):
-                available_tags_by_category[category].extend(item_tags)
+        # Categorize clothing items
+        for item in clothing_items:
+            item_tags = item.get("tags", [])
+            for category, keywords in category_keywords.items():
+                if any(keyword in item_tags for keyword in keywords):
+                    available_tags_by_category[category].extend(item_tags)
     
-    # Remove duplicates and normalize tags
-    available_tags_by_category = {key: list(set(tags)) for key, tags in available_tags_by_category.items()}
+        # Remove duplicates and normalize tags
+        available_tags_by_category = {key: list(set(tags)) for key, tags in available_tags_by_category.items()}
 
-    # Debugging: Print available tags by category
-    # print("Available Tags by Category:", available_tags_by_category)
+        # Debugging: Print available tags by category
+        # print("Available Tags by Category:", available_tags_by_category)
 
-    # Create prompt for OpenAI
-    prompt = (
-        f"The weather is {weather['temp']}°C with {weather['weather']}.\n"
-        f"The dominant event category is '{dominant_category}'.\n"
-        f"Available clothing item tags by category are:\n"
-        f"- Tops: {available_tags_by_category['top']}\n"
-        f"- Bottoms: {available_tags_by_category['bottom']}\n"
-        f"- Jackets: {available_tags_by_category['jacket']}\n"
-        f"- Shoes: {available_tags_by_category['shoes']}\n"
-        f"Available attributes:\n"
-        f"- Colors: {attributes['color']}\n"
-        f"- Materials: {attributes['material']}\n"
-        f"- Patterns: {attributes['pattern']}\n"
-        f"- Styles: {attributes['style']}\n"
-        f"- Fits: {attributes['fit']}\n"
-        f"Recommend one top, one bottom, one jacket, and one pair of shoes, ensuring they align with the weather, the dominant event category, and these attributes.\n"
-        f"Output the recommendation in JSON format like this:\n"
-        f"["
-        f"  {{\"tags\": \"[tag1], [tag2]\", \"category\": \"top\"}},"
-        f"  {{\"tags\": \"[tag3], [tag4]\", \"category\": \"bottom\"}},"
-        f"  {{\"tags\": \"[tag5], [tag6]\", \"category\": \"jacket\"}},"
-        f"  {{\"tags\": \"[tag7], [tag8]\", \"category\": \"shoes\"}}"
-        f"]"
+        # Create prompt for OpenAI
+        prompt = (
+            f"The weather is {weather['temp']}°C with {weather['weather']}.\n"
+            f"The dominant event category is '{dominant_category}'.\n"
+            f"Available clothing item tags by category are:\n"
+            f"- Tops: {available_tags_by_category['top']}\n"
+            f"- Bottoms: {available_tags_by_category['bottom']}\n"
+            f"- Jackets: {available_tags_by_category['jacket']}\n"
+            f"- Shoes: {available_tags_by_category['shoes']}\n"
+            f"Available attributes:\n"
+            f"- Colors: {attributes['color']}\n"
+            f"- Materials: {attributes['material']}\n"
+            f"- Patterns: {attributes['pattern']}\n"
+            f"- Styles: {attributes['style']}\n"
+            f"- Fits: {attributes['fit']}\n"
+            f"Recommend one top, one bottom, one jacket, and one pair of shoes, ensuring they align with the weather, the dominant event category, and these attributes.\n"
+            f"Output the recommendation in JSON format like this:\n"
+            f"["
+            f"  {{\"tags\": \"[tag1], [tag2]\", \"category\": \"top\"}},"
+            f"  {{\"tags\": \"[tag3], [tag4]\", \"category\": \"bottom\"}},"
+            f"  {{\"tags\": \"[tag5], [tag6]\", \"category\": \"jacket\"}},"
+            f"  {{\"tags\": \"[tag7], [tag8]\", \"category\": \"shoes\"}}"
+            f"]"
         )
 
-    # print("OpenAI Prompt:", prompt) # Debugging
+        # print("OpenAI Prompt:", prompt) # Debugging
 
-    # maybe for streamlit provide justification, display, don't
+        # maybe for streamlit provide justification, display, don't
 
-    # Call OpenAI API
-    try:
+        # Call OpenAI API
         response = openai.chat.completions.create(
             model="gpt-4",  # Replace with gpt-3.5-turbo if gpt-4 access is unavailable
             messages=[
@@ -256,13 +264,15 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
         if not isinstance(recommended_tags, list):
             raise ValueError("OpenAI response is not a list of recommendations.")
         
-        return recommended_tags
+        return {
+            "general_recommendation": None,
+            "outfit_recommendation": recommended_tags
+        }
     
     except json.JSONDecodeError as e:
         print("JSON Parsing Error:", e)
         raise Exception(f"Error parsing OpenAI response: {e}")
     except Exception as e:
-        print("General Error:", e)
         raise Exception(f"Error generating recommendation: {e}")
     
 # Main Logic
@@ -286,9 +296,17 @@ def main():
 
     try:
         recommendations = recommend_clothing_with_openai(weather, remaining_events, clothing_items)
-        matched_items = get_images_from_recommendation(recommendations, clothing_items)
-        print("Recommendations:", matched_items)
-        return matched_items
+        # Handle general recommendation
+        if recommendations["general_recommendation"]:
+            print("General Recommendation:", recommendations["general_recommendation"])
+            return recommendations["general_recommendation"]
+
+        # Handle outfit recommendation
+        if recommendations["outfit_recommendation"]:
+            matched_items = get_images_from_recommendation(recommendations["outfit_recommendation"], clothing_items)
+            print("Outfit Recommendation:", matched_items)
+            return matched_items
+
     except Exception as e:
         print(f"Error generating recommendation: {e}")
 
