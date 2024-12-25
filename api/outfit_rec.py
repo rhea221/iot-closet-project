@@ -19,6 +19,23 @@ if not SUPABASE_URL or not SUPABASE_KEY or not openai.api_key:
     raise Exception("Supabase or OpenAI credentials are missing. Check your environment variables.")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# Organize tags into categories
+category_keywords = {
+    "top": ["👕 T-shirt", "👚 Sweatshirt", "👚 Hoodie", "🧣 Sweater", "🧣 Cardigan"],
+    "bottom": ["👖 Trousers", "👖 Jeans", "👖 Joggers", "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt"],
+    "jacket": ["🧥 Jacket", "🧥 Puffer", "🧥 Blazer"],
+    "shoes": ["👟 Sneakers", "👢 Boots"],
+}
+
+# Additional attributes
+attributes = {
+    "color": ["🔵 Blue", "🟢 Green", "🟤 Brown", "⚫ Black", "⚪ Silver", "🔴 Red"],
+    "material": ["🧵 Polyester", "Suede", "🎾 Mesh"],
+    "pattern": ["⬛ Solid", "➖ Striped"],
+    "style": ["🎽 Casual", "🤵 Formal", "💼 Work"],
+    "fit": ["🎯 Regular Fit"],
+}
+
 # Fetch Data from Supabase
 def fetch_weather():
     """Fetch the most recent weather data from Supabase."""
@@ -108,7 +125,13 @@ def get_images_from_recommendation(recommendations, clothing_items):
             if category == "shoes" and not any(tag in ["👟 Sneakers", "👢 Boots"] for tag in item_tags):
                 continue  # Ensure item matches the "shoes" category
 
-            match_score = len(set(recommendation_tags) & set(item_tags))  # Count overlapping tags
+            # Match with additional attributes
+            attribute_score = sum(
+                1 for attr_list in attributes.values() for attr in attr_list if attr in item_tags
+            )
+
+            # Calculate total match score
+            match_score = len(set(recommendation_tags) & set(item_tags)) + attribute_score
 
             if match_score > best_match_score:
                 best_match = {"image_url": item["image_url"], "tags": item_tags}
@@ -158,14 +181,6 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
     # Calculate dominant event category and average event time
     dominant_category = calculate_dominant_event_category(remaining_events)
 
-    # Organize tags into categories
-    category_keywords = {
-        "top": ["👕 T-shirt", "👚 Sweatshirt", "👚 Hoodie", "🧣 Sweater", "🧣 Cardigan"],
-        "bottom": ["👖 Trousers", "👖 Jeans", "👖 Joggers", "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt"],
-        "jacket": ["🧥 Jacket", "🧥 Puffer", "🧥 Blazer"],
-        "shoes": ["👟 Sneakers", "👢 Boots"],
-    }
-
     available_tags_by_category = {key: [] for key in category_keywords}
 
     # Categorize clothing items
@@ -184,20 +199,26 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
     # Create prompt for OpenAI
     prompt = (
         f"The weather is {weather['temp']}°C with {weather['weather']}.\n"
-        f"The dominant event category is '{dominant_category}'.\n"
-        f"Available clothing item tags by category are:\n"
-        f"- Tops: {available_tags_by_category['top']}\n"
-        f"- Bottoms: {available_tags_by_category['bottom']}\n"
-        f"- Jackets: {available_tags_by_category['jacket']}\n"
-        f"- Shoes: {available_tags_by_category['shoes']}\n"
-        f"Recommend one top, one bottom, one jacket, and one pair of shoes, selecting only from these tags.\n"
-        f"Output the recommendation in JSON format like this:\n"
-        f"["
-        f"  {{\"tags\": \"[tag1], [tag2]\", \"category\": \"top\"}},"
-        f"  {{\"tags\": \"[tag3], [tag4]\", \"category\": \"bottom\"}},"
-        f"  {{\"tags\": \"[tag5], [tag6]\", \"category\": \"jacket\"}},"
-        f"  {{\"tags\": \"[tag7], [tag8]\", \"category\": \"shoes\"}}"
-        f"]"
+    f"The dominant event category is '{dominant_category}'.\n"
+    f"Available clothing item tags by category are:\n"
+    f"- Tops: {available_tags_by_category['top']}\n"
+    f"- Bottoms: {available_tags_by_category['bottom']}\n"
+    f"- Jackets: {available_tags_by_category['jacket']}\n"
+    f"- Shoes: {available_tags_by_category['shoes']}\n"
+    f"Available attributes:\n"
+    f"- Colors: {attributes['color']}\n"
+    f"- Materials: {attributes['material']}\n"
+    f"- Patterns: {attributes['pattern']}\n"
+    f"- Styles: {attributes['style']}\n"
+    f"- Fits: {attributes['fit']}\n"
+    f"Recommend one top, one bottom, one jacket, and one pair of shoes, ensuring they align with the weather, the dominant event category, and these attributes.\n"
+    f"Output the recommendation in JSON format like this:\n"
+    f"["
+    f"  {{\"tags\": \"[tag1], [tag2]\", \"category\": \"top\"}},"
+    f"  {{\"tags\": \"[tag3], [tag4]\", \"category\": \"bottom\"}},"
+    f"  {{\"tags\": \"[tag5], [tag6]\", \"category\": \"jacket\"}},"
+    f"  {{\"tags\": \"[tag7], [tag8]\", \"category\": \"shoes\"}}"
+    f"]"
     )
 
     # print("OpenAI Prompt:", prompt) # Debugging
