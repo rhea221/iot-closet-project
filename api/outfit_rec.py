@@ -41,17 +41,15 @@ def fetch_clothing_items():
     response = supabase.table("closet-items").select("*").execute()
     clothing_items = response.data or []
 
-    # Ensure tags are parsed into Python lists
     for item in clothing_items:
         if isinstance(item.get("tags"), str):
             try:
-                # Convert JSON string to a Python list
-                item["tags"] = json.loads(item["tags"])
-            except json.JSONDecodeError:
+                # Convert the string to a Python list
+                item["tags"] = eval(item["tags"])  # Use eval cautiously for known-safe data
+            except (SyntaxError, ValueError):
                 item["tags"] = []  # Default to empty list if parsing fails
 
     return clothing_items
-
 
 
 def calculate_dominant_event_category(events):
@@ -154,21 +152,17 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
         except Exception as e:
             raise Exception(f"Error generating clothing recommendation: {str(e)}")
 
+    # if remaining_events
+    tags_context = f"Available tags are: {', '.join(available_tags)}."
+    
     # Calculate dominant event category and average event time
     dominant_category = calculate_dominant_event_category(remaining_events)
     avg_event_time = calculate_average_event_time(remaining_events)
 
     event_context = " ".join([
             f"{event.get('title', 'Untitled Event')} at {event.get('location', 'No location specified')}"
-            f"({event.get('duration', 'Unknown')} hrs)"
             for event in remaining_events
     ])
-    avg_event_time_context = (
-        f"The average event time is {avg_event_time.strftime('%H:%M %p')} UTC." if avg_event_time else ""
-    )
-
-    # if remaining_events
-    tags_context = f"Available tags are: {', '.join(available_tags)}."
 
     # Format clothing items
     clothing_context = "\n".join([
@@ -182,7 +176,6 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
         f"- Weather: {weather_context}\n"
         f"- Events: {event_context}\n"
         f"- Dominant Category: {dominant_category}\n"
-        f"- {avg_event_time_context}\n"
         f"- Tags: {tags_context}\n"
         f"- Clothing Items:\n{clothing_context}\n\n"
         f"Provide the response strictly in this JSON format:\n"
@@ -201,7 +194,6 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
             max_tokens=150,
             temperature=0.7,
         )
-
         print("OpenAI Prompt:", prompt)
 
         # Extract the OpenAI response content
@@ -209,12 +201,9 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items, av
 
         # Parse the content as JSON
         recommendations = json.loads(response_content)
-
-        # Validate the response structure
-        if not isinstance(recommendations, list):
-            raise ValueError("Invalid recommendation format. Expected a list of dictionaries.")
-
         return recommendations
+    except json.JSONDecodeError as e:
+        raise Exception(f"Error parsing OpenAI response: {e}")
     except Exception as e:
         raise Exception(f"Error generating clothing recommendation: {e}")
     
@@ -231,35 +220,36 @@ def main():
         print("No clothing items available.")
         return
 
-    try:
-        available_tags = [
-            "🔴 Red", "🔵 Blue", "🟢 Green", "🟤 Brown", "🩷 Pink", "⚫ Black", "⚪ White",
-            "💜 Purple", "🟡 Yellow", "🟠 Orange", "⚪ Silver",
-            "👕 T-shirt", "👚 Sweatshirt", "🧥 Hoodie", "🧣 Sweater", "🧣 Cardigan",
-            "🧥 Jacket", "🧥 Puffer", "👖 Trousers", "👖 Jeans", "👖 Joggers",
-            "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt", "👟 Sneakers", "👢 Boots",
-            "🧵 Cotton", "👖 Denim", "👜 Leather", "🧶 Wool", "🧵 Polyester", "🎾 Mesh",
-            "⬛ Solid", "➖ Striped", "🏁 Checked", "🟫 Camo", "🌸 Festive",
-            "🎽 Casual", "🕶 Streetwear", "👟 Sporty", "🤵 Formal", "🎉 Party", "💼 Work",
-            "🤏 Slim Fit", "📦 Baggy", "🎯 Regular Fit",
-        ]
+    available_tags = [
+        "🔴 Red", "🔵 Blue", "🟢 Green", "🟤 Brown", "🩷 Pink", "⚫ Black", "⚪ White",
+        "💜 Purple", "🟡 Yellow", "🟠 Orange", "⚪ Silver",
+        "👕 T-shirt", "👚 Sweatshirt", "🧥 Hoodie", "🧣 Sweater", "🧣 Cardigan",
+        "🧥 Jacket", "🧥 Puffer", "👖 Trousers", "👖 Jeans", "👖 Joggers",
+        "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt", "👟 Sneakers", "👢 Boots",
+        "🧵 Cotton", "👖 Denim", "👜 Leather", "🧶 Wool", "🧵 Polyester", "🎾 Mesh",
+        "⬛ Solid", "➖ Striped", "🏁 Checked", "🟫 Camo", "🌸 Festive",
+        "🎽 Casual", "🕶 Streetwear", "👟 Sporty", "🤵 Formal", "🎉 Party", "💼 Work",
+        "🤏 Slim Fit", "📦 Baggy", "🎯 Regular Fit",
+    ]
 
+    try:
         recommendations = recommend_clothing_with_openai(
             weather, remaining_events, clothing_items, available_tags
         )
+        if not recommendations:
+            print("No recommendations generated by OpenAI.")
+            return
 
-        if recommendations:
-            outfit_images = get_images_from_recommendation(recommendations, clothing_items)
-            print("Recommendations:", recommendations)
-            print("Outfit Images:", outfit_images)
-            return recommendations, outfit_images
-        else:
-            print("No recommendations generated.")
-            return None, None
+        outfit_images = get_images_from_recommendation(recommendations, clothing_items)
+        if not outfit_images:
+            print("No outfit images matched the recommendations.")
+            return
+
+        print("Recommendations:", recommendations)
+        print("Outfit Images:", outfit_images)
+        return recommendations, outfit_images
     except Exception as e:
-        print(f"Error generating recommendation: {e}")
-        return None, None
-
+        print(f"Error in recommendation generation: {e}")
 
 if __name__ == "__main__":
     main()

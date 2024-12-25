@@ -1,3 +1,4 @@
+import json
 import streamlit as st
 import pandas as pd
 from PIL import Image
@@ -109,10 +110,10 @@ with tab1:
                 if recommendations:
                     st.success("Recommendation Generated!")
                     st.subheader("Your Outfit Recommendation:")
-                    
-                    # Display images with captions
+                    st.text_area("Raw OpenAI Response:", json.dumps(recommendations, indent=2))
                     for item in outfit_images:
                         st.image(item["image_url"], caption=", ".join(item["tags"]), use_column_width=True)
+
                     
                     # Display raw OpenAI response in a text box
                     st.subheader("OpenAI Response Debug:")
