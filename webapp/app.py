@@ -290,8 +290,6 @@ with tab2:
         # Send selected items to laundry
         if st.button("Send to Laundry"):
             send_to_laundry(selected_for_laundry)
-        else:
-            st.warning("No clothes found in your closet.")
 
         # Fetch items currently in laundry
         try:
