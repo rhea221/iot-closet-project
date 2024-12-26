@@ -129,15 +129,18 @@ with tab1:
 
             if weather:
                 weather_summary = f"The current temperature is {weather['temp']}°C with {weather['weather']}."
+            else:
+                weather_summary = "Weather data is currently unavailable."
+
             if remaining_events:
                 event_summary = f"You have {len(remaining_events)} event(s) left today."
             else:
-                weather_summary = "Weather data is currently unavailable."
                 event_summary = "No events found for today."
 
             st.subheader(f"Hello! {weather_summary} {event_summary}")
         except Exception as e:
             st.error(f"Error fetching data: {e}")
+
 
 
     if st.button("Get Outfit Recommendation"):
