@@ -164,7 +164,11 @@ def get_images_from_recommendation(recommendations, clothing_items):
             match_score = len(set(recommendation_tags) & set(item_tags)) + attribute_score
 
             if match_score > best_match_score:
-                best_match = {"image_url": item["image_url"], "tags": item_tags}
+                best_match = {
+                    "image_url": item["image_url"],
+                    "tags": item_tags,
+                    "name": item.get("name", "Unknown")  # Add name
+                }
                 best_match_score = match_score
 
         if best_match:

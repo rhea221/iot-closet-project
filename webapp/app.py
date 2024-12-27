@@ -49,12 +49,13 @@ def upload_image_to_supabase(file, file_name):
         st.error(f"Error uploading image: {e}")
         return None
 
-def save_image_metadata_to_supabase(image_url, tags):
+def save_image_metadata_to_supabase(image_url, tags, name):
     """Save image metadata to Supabase database."""
     try:
         data = {
             "image_url": image_url,
             "tags": tags,  # Save tags as a JSON array
+            "name": name,  # Save the clothing item's name
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         # Insert data into Supabase table
@@ -64,8 +65,9 @@ def save_image_metadata_to_supabase(image_url, tags):
         if hasattr(response, "status_code") and response.status_code != 201:
             raise Exception(f"Error: {response.json()}")
 
-        # Log success
-        st.info(f"Supabase response: {response.data}")
+        # Log success debugging
+        # st.info(f"Supabase response: {response.data}")
+
         return True
     except Exception as e:
         st.error(f"Error saving metadata to Supabase: {e}")
@@ -161,10 +163,10 @@ with tab1:
                         image_html = f"""
                         <div style="text-align: center; margin-bottom: 20px;">
                             <img src="{item['image_url']}" style="width: 200px; height: auto; border-radius: 15px; box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);"/>
-                            <p style="margin-top: 10px; font-size: 16px; font-weight: bold; color: #f1f1f1;">{category.capitalize()}</p>
-                            <p style="font-size: 14px; color: #c1c1c1;">{', '.join(item['tags'])}</p>
+                            <p style="margin-top: 10px; font-size: 16px; font-weight: bold;">{item['name']}</p>
+                            <p style="font-size: 14px;">{category.capitalize()} - {', '.join(item['tags'])}</p>
                         </div>
-                        """
+                        """ 
                         st.markdown(image_html, unsafe_allow_html=True)
                 else:
                     st.warning("No recommendation generated. Please check your data.")
@@ -243,7 +245,10 @@ with tab2:
 
     # Check if image URL exists in session state
     if "image_url" in st.session_state:
-        st.subheader("Add Tags to Your Item")
+        st.subheader("Add Details to Your Item")
+
+        # Name field
+        item_name = st.text_input("Enter a Name for this Clothing Item", key="item_name")
 
         # Dropdowns for tagging
         type = st.multiselect("Select Type:", ["👕 T-shirt", "👚 Sweatshirt", "👚 Hoodie", "🧣 Sweater", "🧣 Cardigan", "🧥 Jacket", "🧥 Puffer", "🧥 Blazer", "👖 Trousers", "👖 Jeans", "👖 Joggers", "🩳 Shorts", "👗 Long Skirt", "👗 Short Skirt", "👟 Sneakers", "👢 Boots"], key="type", max_selections=1)
@@ -380,13 +385,13 @@ def analyze_weather_clothing_correlation(weather_data, clothes_df):
     plt.colorbar(cax, ax=ax)
 
     # Set axis labels and titles
-    ax.set_title("Clothing Usage vs. Temperature (Per Degree)", pad=20)
+    ax.set_title("Clothing Usage vs. Temperature (Per °C)", pad=20)
     ax.set_xlabel("Temperature (°C)")
-    ax.set_ylabel("Material and Style")
+    ax.set_ylabel("Item")
     ax.set_xticks(range(len(pivot_table.columns)))
     ax.set_xticklabels(pivot_table.columns, rotation=45, ha="right")
     ax.set_yticks(range(len(pivot_table.index)))
-    ax.set_yticklabels([f"{material} - {style}" for material, style in pivot_table.index])
+    ax.set_yticklabels([f"{name}" for name in pivot_table.index])
 
     # Render the plot in Streamlit
     st.pyplot(fig)
