@@ -360,9 +360,9 @@ def analyze_calendar_event_additions(events_data):
     # Plot the data
     st.line_chart(data=grouped.set_index("date_added"), use_container_width=True)
 
-def analyze_closet_item_additions(closet_data):
+def analyze_closet_item_totals(closet_data):
     """
-    Analyze how frequently new closet items are uploaded over time.
+    Analyze the total number of closet items over time to track spending habits.
     """
 
     if not closet_data:
@@ -378,8 +378,12 @@ def analyze_closet_item_additions(closet_data):
     closet_df["date_added"] = closet_df["created_at"].dt.date
     grouped = closet_df.groupby("date_added").size().reset_index(name="new_items")
 
+    # Calculate cumulative sum for total items over time
+    grouped["total_items"] = grouped["new_items"].cumsum()
+
     # Plot the data
-    st.line_chart(data=grouped.set_index("date_added"), use_container_width=True)
+    st.line_chart(data=grouped.set_index("date_added")[["total_items"]], use_container_width=True)
+
 
 
 def analyze_weather_clothing_correlation(weather_data, clothes_df):
@@ -556,8 +560,8 @@ with tab4:
         analyze_calendar_event_additions(calendar_events)
 
     if closet_items:
-        st.subheader("New Clothes Over Time")
-        analyze_closet_item_additions(closet_items)
+        st.subheader("Total Clothes Over Time")
+        analyze_closet_item_totals(closet_items)
 
 # Tab 5: Correlations Analysis
 with tab5:
