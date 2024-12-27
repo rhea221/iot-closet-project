@@ -454,6 +454,41 @@ def analyze_event_category_clothing_correlation(event_data, clothes_df):
     # Render the plot in Streamlit
     st.pyplot(fig)
 
+def analyze_weather_clothing_trends_over_time(weather_data, clothes_df):
+    """
+    Analyze how weather conditions affect clothing usage over time.
+    """
+    st.subheader("Weather-Based Clothing Usage Trends Over Time")
+
+    if not weather_data or clothes_df.empty:
+        st.warning("Insufficient data for trend analysis.")
+        return
+
+    # Convert weather data to DataFrame
+    weather_df = pd.DataFrame(weather_data)
+    weather_df["created_at"] = pd.to_datetime(weather_df["created_at"], errors="coerce")
+    weather_df.dropna(subset=["created_at"], inplace=True)
+    weather_df["date"] = weather_df["created_at"].dt.date
+
+    # Convert clothing data to DataFrame
+    clothes_df["date"] = pd.to_datetime(clothes_df["created_at"], errors="coerce").dt.date
+
+    # Merge data on date
+    merged_df = pd.merge(clothes_df, weather_df, on="date", how="inner")
+
+    # Group clothing usage by weather condition over time
+    grouped = merged_df.groupby(["weather", "date"]).size().reset_index(name="counts")
+
+    # Pivot table for line chart
+    pivot_table = grouped.pivot(index="date", columns="weather", values="counts").fillna(0)
+
+    # Plot time-series chart
+    st.line_chart(pivot_table)
+
+    # Insights
+    st.write("### Insights:")
+    st.write("- Observe how different weather conditions influence clothing choices over time.")
+    st.write("- Identify patterns in clothing usage for specific weather conditions.")
 
 
 with tab3:
@@ -520,3 +555,8 @@ with tab3:
         st.subheader("Event vs. Clothing Usage")
         clothes_df = pd.DataFrame(clothes)
         analyze_event_category_clothing_correlation(calendar_events, clothes_df)
+
+    if weather_data and clothes:
+        st.subheader("Weather and Closet Analytics")
+        clothes_df = pd.DataFrame(clothes)
+        analyze_weather_clothing_trends_over_time(weather_data, clothes_df)
