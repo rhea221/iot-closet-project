@@ -58,11 +58,9 @@ def fetch_remaining_events():
 def fetch_clothing_items():
     """Fetch clothing items stored in the Supabase closet-items table."""
     try:
-        # Use .or_ to include rows where status is NULL or not equal to "laundry"
-        response = supabase.table("closet-items").select("*").filter("status", "is", None).or_("status.neq.laundry").execute()
-
-        # # Debug: Log the raw response
-        # print("Supabase Response Debugging:", response)
+        response = supabase.table("closet-items").select("*").or_(
+            "status.is.null,status.neq.laundry"
+        ).execute()
 
         # Check for errors in the response
         if hasattr(response, "error") and response.error:
@@ -76,6 +74,7 @@ def fetch_clothing_items():
     except Exception as e:
         print(f"Error fetching clothing items: {e}")
         return []
+
 
 
 
