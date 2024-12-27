@@ -384,11 +384,6 @@ def analyze_closet_item_totals(closet_data):
     # Plot the data
     st.line_chart(data=grouped.set_index("date_added")[["total_items"]], use_container_width=True)
 
-    # Add textual insights
-    st.write("### Insights:")
-    st.write("- Track the growth of your closet over time.")
-    st.write("- Identify any spikes or patterns in your spending habits.")
-
 
 def analyze_weather_clothing_correlation(weather_data, clothes_df):
     """
