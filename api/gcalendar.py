@@ -81,6 +81,9 @@ def fetch_existing_events():
     try:
         response = supabase.table("calendar-events").select("*").gte("start_time", start_of_day.isoformat()).execute()
         if response.data:
+            # Normalize timestamps for comparison
+            for event in response.data:
+                event["start_time"] = str(parser.isoparse(event["start_time"]).astimezone(pytz.UTC).isoformat())
             return response.data
         else:
             print("No existing events found for today.")
@@ -90,17 +93,28 @@ def fetch_existing_events():
         return []
 
 
+
 def filter_new_events(events, existing_events):
     """Filter out events that are already in the database."""
-    existing_event_ids = {event["google-event-id"] for event in existing_events if "google-event-id" in event}
-    existing_event_keys = {(event["google-event-id"], event["start_time"], event["title"]) for event in existing_events}
+    # Create a set of existing event keys (normalized)
+    existing_event_keys = {
+        (event["google-event-id"], event["start_time"], event["title"])
+        for event in existing_events
+    }
 
     new_events = []
     for event in events:
-        event_key = (event["google-event-id"], event["start_time"], event["title"])
-        if event["google-event-id"] not in existing_event_ids or event_key not in existing_event_keys:
+        # Normalize event keys for comparison
+        event_key = (
+            event["google-event-id"],
+            str(parser.isoparse(event["start_time"]).astimezone(pytz.UTC).isoformat()),
+            event["title"]
+        )
+        if event_key not in existing_event_keys:
             new_events.append(event)
+
     return new_events
+
 
 
 def save_events_to_supabase(events):
