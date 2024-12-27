@@ -346,6 +346,51 @@ def plot_heatmap(dataframe, x_col, y_col, agg_col, title, xlabel, ylabel):
     plt.yticks(range(len(pivot_table.index)), pivot_table.index)
     st.pyplot(plt)
 
+def analyze_calendar_event_additions(events_data):
+    """
+    Analyze how frequently new calendar events are added over time.
+    """
+    st.subheader("Calendar Events - New Additions Over Time")
+
+    if not events_data:
+        st.warning("No calendar event data available for analysis.")
+        return
+
+    # Convert events data to DataFrame
+    events_df = pd.DataFrame(events_data)
+    events_df["created_at"] = pd.to_datetime(events_df["created_at"], errors="coerce")
+    events_df.dropna(subset=["created_at"], inplace=True)
+
+    # Group by date of addition
+    events_df["date_added"] = events_df["created_at"].dt.date
+    grouped = events_df.groupby("date_added").size().reset_index(name="new_events")
+
+    # Plot the data
+    st.line_chart(data=grouped.set_index("date_added"), use_container_width=True)
+
+def analyze_closet_item_additions(closet_data):
+    """
+    Analyze how frequently new closet items are uploaded over time.
+    """
+    st.subheader("Closet Items - New Additions Over Time")
+
+    if not closet_data:
+        st.warning("No closet item data available for analysis.")
+        return
+
+    # Convert closet data to DataFrame
+    closet_df = pd.DataFrame(closet_data)
+    closet_df["created_at"] = pd.to_datetime(closet_df["created_at"], errors="coerce")
+    closet_df.dropna(subset=["created_at"], inplace=True)
+
+    # Group by date of addition
+    closet_df["date_added"] = closet_df["created_at"].dt.date
+    grouped = closet_df.groupby("date_added").size().reset_index(name="new_items")
+
+    # Plot the data
+    st.line_chart(data=grouped.set_index("date_added"), use_container_width=True)
+
+
 def analyze_weather_clothing_correlation(weather_data, clothes_df):
     """
     Analyze the correlation between weather data and clothing usage with temperature as individual degree columns.
@@ -454,62 +499,6 @@ def analyze_event_category_clothing_correlation(event_data, clothes_df):
     # Render the plot in Streamlit
     st.pyplot(fig)
 
-def analyze_weather_clothing_trends_over_time(weather_data, clothes_df):
-    """
-    Analyze how weather conditions affect clothing usage over time.
-    """
-    st.subheader("Weather-Based Clothing Usage Trends Over Time")
-
-    if not weather_data or clothes_df.empty:
-        st.warning("Insufficient data for trend analysis.")
-        return
-
-    # Convert weather data to DataFrame
-    weather_df = pd.DataFrame(weather_data)
-    weather_df["created_at"] = pd.to_datetime(weather_df["created_at"], errors="coerce")
-    weather_df.dropna(subset=["created_at"], inplace=True)
-    weather_df["date"] = weather_df["created_at"].dt.date
-
-    # Convert clothing data to DataFrame
-    clothes_df["date"] = pd.to_datetime(clothes_df["created_at"], errors="coerce").dt.date
-
-    # Merge data on date
-    merged_df = pd.merge(clothes_df, weather_df, on="date", how="inner")
-
-    # Group clothing usage by weather condition and date
-    grouped = merged_df.groupby(["weather", "date"]).size().reset_index(name="counts")
-
-    # Pivot table for plotting
-    pivot_table = grouped.pivot(index="date", columns="weather", values="counts").fillna(0)
-
-    # Plot with markers, legend, and title
-    fig, ax = plt.subplots(figsize=(12, 6))
-
-    for weather_condition in pivot_table.columns:
-        ax.plot(
-            pivot_table.index,
-            pivot_table[weather_condition],
-            marker="o",
-            label=weather_condition.capitalize()
-        )
-
-    # Formatting the plot
-    ax.set_title("Weather-Based Clothing Usage Trends Over Time", fontsize=16, pad=15)
-    ax.set_xlabel("Date", fontsize=12)
-    ax.set_ylabel("Usage Count", fontsize=12)
-    ax.legend(title="Weather Condition", bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=10)
-    ax.grid(True, linestyle="--", alpha=0.6)
-    fig.autofmt_xdate(rotation=45)
-
-    # Render the plot in Streamlit
-    st.pyplot(fig)
-
-    # Insights
-    st.write("### Insights:")
-    st.write("- Observe how different weather conditions (e.g., rain, clear skies) influence clothing usage over time.")
-    st.write("- Identify trends for specific weather conditions and plan recommendations accordingly.")
-
-
 
 with tab3:
     st.header("My Database")
@@ -539,8 +528,9 @@ with tab3:
     else:
         st.warning("No weather data found. Please check your data source.")
 
+
  # Calendar Events Section
-    st.subheader("Calendar Event Trends")
+    
 
     def fetch_calendar_events():
         """Fetch today's calendar events from Supabase."""
@@ -557,7 +547,16 @@ with tab3:
             return None
 
     calendar_events = fetch_calendar_events()
+    closet_items = fetch_all_clothes()
+
     if calendar_events:
+        analyze_calendar_event_additions(calendar_events)
+
+    if closet_items:
+        analyze_closet_item_additions(closet_items)
+
+    if calendar_events:
+        st.subheader("Calendar Event Trends")
         event_df = pd.DataFrame(calendar_events)
         event_df["start_time"] = pd.to_datetime(event_df["start_time"], errors="coerce")
         event_df["duration"] = event_df["duration"].astype(float)
@@ -576,7 +575,3 @@ with tab3:
         clothes_df = pd.DataFrame(clothes)
         analyze_event_category_clothing_correlation(calendar_events, clothes_df)
 
-    if weather_data and clothes:
-        st.subheader("Weather and Closet Analytics")
-        clothes_df = pd.DataFrame(clothes)
-        analyze_weather_clothing_trends_over_time(weather_data, clothes_df)
