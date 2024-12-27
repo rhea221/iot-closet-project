@@ -343,7 +343,7 @@ def plot_heatmap(dataframe, x_col, y_col, agg_col, title, xlabel, ylabel):
 
 def analyze_weather_clothing_correlation(weather_data, clothes_df):
     """
-    Analyze the correlation between weather data and clothing usage using Matplotlib.
+    Analyze the correlation between weather data and clothing usage with temperature as individual degree columns.
     """
     st.subheader("Correlation Analysis: Weather vs. Clothing Usage")
 
@@ -358,6 +358,7 @@ def analyze_weather_clothing_correlation(weather_data, clothes_df):
 
     # Extract the date for correlation with clothing usage
     weather_df["date"] = weather_df["created_at"].dt.date
+    weather_df["temp"] = weather_df["temp"].round().astype(int)  # Round temperature to nearest integer
 
     # Analyze clothing item usage by material/style over dates
     clothes_df["date"] = pd.to_datetime(clothes_df["created_at"], errors="coerce").dt.date
@@ -367,9 +368,8 @@ def analyze_weather_clothing_correlation(weather_data, clothes_df):
     # Merge weather and clothing data on dates
     merged_df = pd.merge(clothes_df, weather_df, on="date", how="inner")
 
-    # Group clothing usage by temperature ranges and materials/styles
-    temp_ranges = pd.cut(merged_df["temp"], bins=[-10, 5, 15, 25, 35], labels=["<5°C", "5-15°C", "15-25°C", ">25°C"])
-    grouped = merged_df.groupby([temp_ranges, "material", "style"]).size().reset_index(name="counts")
+    # Group clothing usage by temperature and materials/styles
+    grouped = merged_df.groupby(["temp", "material", "style"]).size().reset_index(name="counts")
 
     # Pivot table for visualization
     pivot_table = grouped.pivot(index=["material", "style"], columns="temp", values="counts").fillna(0)
@@ -380,11 +380,11 @@ def analyze_weather_clothing_correlation(weather_data, clothes_df):
     plt.colorbar(cax, ax=ax)
 
     # Set axis labels and titles
-    ax.set_title("Clothing Usage vs. Temperature", pad=20)
-    ax.set_xlabel("Temperature Ranges")
+    ax.set_title("Clothing Usage vs. Temperature (Per Degree)", pad=20)
+    ax.set_xlabel("Temperature (°C)")
     ax.set_ylabel("Material and Style")
     ax.set_xticks(range(len(pivot_table.columns)))
-    ax.set_xticklabels(pivot_table.columns, rotation=45, ha="left")
+    ax.set_xticklabels(pivot_table.columns, rotation=45, ha="right")
     ax.set_yticks(range(len(pivot_table.index)))
     ax.set_yticklabels([f"{material} - {style}" for material, style in pivot_table.index])
 
@@ -393,8 +393,8 @@ def analyze_weather_clothing_correlation(weather_data, clothes_df):
 
     # Textual insights
     st.write("### Insights:")
-    st.write("- Observe how colder temperatures increase the usage of materials like wool.")
-    st.write("- Warmer temperatures may favor styles like 'Casual' or materials like 'Cotton'.")
+    st.write("- Analyze the frequency of materials and styles used at each temperature.")
+    st.write("- Observe which materials (e.g., wool, cotton) and styles (e.g., casual, formal) are more common for specific temperatures.")
 
 
 with tab3:
