@@ -365,7 +365,7 @@ def analyze_weather_clothing_correlation(weather_data, clothes_df):
     weather_df["date"] = weather_df["created_at"].dt.date
     weather_df["temp"] = weather_df["temp"].round().astype(int)  # Round temperature to nearest integer
 
-    # Analyze clothing item usage by material/style over dates
+    # Analyze clothing item usage by name/material/style over dates
     clothes_df["date"] = pd.to_datetime(clothes_df["created_at"], errors="coerce").dt.date
     clothes_df["material"] = clothes_df["tags"].apply(lambda tags: next((tag for tag in tags if "🧵" in tag or "🎾" in tag or "👖" in tag), "Unknown"))
     clothes_df["style"] = clothes_df["tags"].apply(lambda tags: next((tag for tag in tags if tag in ["🎽 Casual", "🤵 Formal", "💼 Work"]), "Unknown"))
@@ -373,32 +373,32 @@ def analyze_weather_clothing_correlation(weather_data, clothes_df):
     # Merge weather and clothing data on dates
     merged_df = pd.merge(clothes_df, weather_df, on="date", how="inner")
 
-    # Group clothing usage by temperature and materials/styles
-    grouped = merged_df.groupby(["temp", "material", "style"]).size().reset_index(name="counts")
+    # Group clothing usage by temperature and names/materials/styles
+    grouped = merged_df.groupby(["temp", "name", "material", "style"]).size().reset_index(name="counts")
 
     # Pivot table for visualization
-    pivot_table = grouped.pivot(index=["material", "style"], columns="temp", values="counts").fillna(0)
+    pivot_table = grouped.pivot(index=["name", "material", "style"], columns="temp", values="counts").fillna(0)
 
     # Plot a heatmap with Matplotlib
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(12, 8))
     cax = ax.matshow(pivot_table, cmap="coolwarm", aspect="auto")
     plt.colorbar(cax, ax=ax)
 
     # Set axis labels and titles
     ax.set_title("Clothing Usage vs. Temperature (Per °C)", pad=20)
     ax.set_xlabel("Temperature (°C)")
-    ax.set_ylabel("Item")
+    ax.set_ylabel("Clothing Item (Name, Material, Style)")
     ax.set_xticks(range(len(pivot_table.columns)))
     ax.set_xticklabels(pivot_table.columns, rotation=45, ha="right")
     ax.set_yticks(range(len(pivot_table.index)))
-    ax.set_yticklabels([f"{name}" for name in pivot_table.index])
+    ax.set_yticklabels([f"{name}, {material}, {style}" for name, material, style in pivot_table.index])
 
     # Render the plot in Streamlit
     st.pyplot(fig)
 
     # Textual insights
     st.write("### Insights:")
-    st.write("- Analyze the frequency of materials and styles used at each temperature.")
+    st.write("- Analyze the frequency of specific clothing items (e.g., names) and styles used at each temperature.")
     st.write("- Observe which materials (e.g., wool, cotton) and styles (e.g., casual, formal) are more common for specific temperatures.")
 
 
