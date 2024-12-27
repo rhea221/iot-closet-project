@@ -74,13 +74,6 @@ def fetch_clothing_items():
         return []
 
 
-
-
-
-
-
-
-
 def calculate_dominant_event_category(events):
     """Determine the dominant category of events."""
     categories = {
@@ -175,8 +168,6 @@ def get_images_from_recommendation(recommendations, clothing_items):
         
 
     return selected_items
-
-
 
 
 # OpenAI Recommendation Logic

@@ -126,6 +126,34 @@ def plot_heatmap(dataframe, x_col, y_col, agg_col, title, xlabel, ylabel):
     plt.yticks(range(len(pivot_table.index)), pivot_table.index)
     st.pyplot(plt)
 
+def log_recommendation_to_supabase(recommendation, weather, events=None, recommendation_type="general"):
+    """
+    Log the generated recommendation to Supabase for tracking.
+    recommendation_type: "general" for text-based recommendations, "outfit" for specific item recommendations.
+    """
+    try:
+        log_data = {
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "type": recommendation_type,
+            "weather": weather,  # Store weather info at the time
+        }
+
+        if recommendation_type == "general":
+            # Log general recommendations as plain text
+            log_data["recommendation"] = recommendation
+            log_data["events"] = None
+        elif recommendation_type == "outfit":
+            # Log outfit recommendations as structured data
+            log_data["recommendation"] = recommendation  # Store the outfit recommendation JSON
+            log_data["events"] = events  # Store associated event data
+
+        # Save to Supabase
+        supabase.table("recommendation-logs").insert(log_data).execute()
+        print("Recommendation logged successfully!")
+    except Exception as e:
+        print(f"Error logging recommendation: {e}")
+
+
 # -----------------------------------
 # Streamlit Tabs
 # -----------------------------------
@@ -191,9 +219,16 @@ with tab1:
                 if isinstance(recommendations, str):
                     st.success("Recommendation Generated!")
                     st.text_area("General Recommendation", recommendations, height=150)
+                    # Log general recommendation to Supabase
+                    log_recommendation_to_supabase(
+                        recommendation=recommendations,
+                        weather=weather,
+                        recommendation_type="general"
+                    )
                 elif recommendations and isinstance(recommendations, dict):
                     st.success("Recommendation Generated!")
                     st.subheader("Your Outfit Recommendation:")
+
                     for category, item in recommendations.items():
                         image_html = f"""
                         <div style="text-align: center; margin-bottom: 20px;">
@@ -203,6 +238,14 @@ with tab1:
                         </div>
                         """ 
                         st.markdown(image_html, unsafe_allow_html=True)
+                
+                # Log outfit recommendation to Supabase
+                    log_recommendation_to_supabase(
+                        recommendation=recommendations,
+                        weather=weather,
+                        events=remaining_events,
+                        recommendation_type="outfit"
+                    )
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:
