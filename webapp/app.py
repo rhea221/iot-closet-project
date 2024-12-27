@@ -341,6 +341,45 @@ def plot_heatmap(dataframe, x_col, y_col, agg_col, title, xlabel, ylabel):
     plt.yticks(range(len(pivot_table.index)), pivot_table.index)
     st.pyplot(plt)
 
+def create_closet_usage_chart(clothes_df):
+    """
+    Create a bar chart for closet usage trends with item images as x-axis labels.
+    """
+    if "image_url" in clothes_df.columns:
+        # Count occurrences of each item
+        item_counts = clothes_df["image_url"].value_counts()
+        item_images = item_counts.index
+
+        # Prepare images for x-axis
+        images = []
+        for url in item_images:
+            try:
+                response = requests.get(url)
+                img = Image.open(io.BytesIO(response.content))
+                images.append(img.resize((50, 50)))  # Resize to fit nicely on chart
+            except Exception as e:
+                print(f"Error loading image from {url}: {e}")
+                images.append(None)  # Placeholder for missing images
+
+        # Create the bar chart
+        fig, ax = plt.subplots(figsize=(10, 6))
+        bars = ax.bar(range(len(item_counts)), item_counts.values, tick_label=[""] * len(item_counts), color="skyblue")
+
+        # Add images as x-ticks
+        for i, img in enumerate(images):
+            if img:
+                ax.imshow(img, extent=[bars[i].get_x(), bars[i].get_x() + bars[i].get_width(), -max(item_counts.values) * 0.1, 0])
+
+        ax.set_title("Closet Usage Trends")
+        ax.set_ylabel("Counts")
+        ax.set_xticks(range(len(item_counts)))
+        ax.set_xticklabels([""] * len(item_counts), rotation=90)
+        ax.set_ylim([0, max(item_counts.values) * 1.1])
+
+        st.pyplot(fig)
+    else:
+        st.warning("No images available for visualization.")
+
 
 with tab3:
     st.header("My Database")
@@ -394,13 +433,6 @@ with tab3:
         event_df["duration"] = event_df["duration"].astype(float)
         event_df["date"] = event_df["start_time"].dt.date
 
-        st.write("Daily Event Distribution")
-        daily_event_counts = event_df.groupby("date").size()
-        st.bar_chart(daily_event_counts)
-
-        st.write("Event Durations")
-        st.bar_chart(event_df["duration"])
-
         st.write("Daily Event Heatmap")
         event_df["hour"] = event_df["start_time"].dt.hour
         plot_heatmap(event_df, "hour", "date", "title", "Daily Event Heatmap", "Hour of Day", "Date")
@@ -410,11 +442,5 @@ with tab3:
     clothes = fetch_all_clothes()
     if clothes:
         clothes_df = pd.DataFrame(clothes)
-        if "tags" in clothes_df.columns:
-            tags = clothes_df["tags"].explode()
-            st.bar_chart(tags.value_counts(), use_container_width=True)
-
-        if "image_url" in clothes_df.columns:
-            clothes_df["type"] = clothes_df["tags"].apply(lambda x: x[0] if x else "Unknown")
-            st.write("Item Type Distribution")
-            st.bar_chart(clothes_df["type"].value_counts())
+        st.subheader("Closet Usage Trends with Images")
+        create_closet_usage_chart(clothes_df)
