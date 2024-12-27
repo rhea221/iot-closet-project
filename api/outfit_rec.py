@@ -191,7 +191,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
     if not remaining_events:
         # No events left for today, generate a weather-based quick statement
         prompt = (
-            f"Give me a light-hearted general recommendation based on the weather, in a very short paragraph (maximum 3 lines).:\n"
+            f"Give me a light-hearted general recommendation on what to wear based on the weather, in a very short paragraph (maximum 3 lines).:\n"
             f"- Weather: {weather_context}\n"
         )
 

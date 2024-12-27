@@ -387,11 +387,11 @@ def analyze_weather_clothing_correlation(weather_data, clothes_df):
     # Set axis labels and titles
     ax.set_title("Clothing Usage vs. Temperature (Per °C)", pad=20)
     ax.set_xlabel("Temperature (°C)")
-    ax.set_ylabel("Clothing Item (Name, Material, Style)")
+    ax.set_ylabel("Clothing Item)")
     ax.set_xticks(range(len(pivot_table.columns)))
     ax.set_xticklabels(pivot_table.columns, rotation=45, ha="right")
     ax.set_yticks(range(len(pivot_table.index)))
-    ax.set_yticklabels([f"{name}, {material}, {style}" for name, material, style in pivot_table.index])
+    ax.set_yticklabels([f"{name}" for name in pivot_table.index])
 
     # Render the plot in Streamlit
     st.pyplot(fig)
