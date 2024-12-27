@@ -343,7 +343,7 @@ def plot_heatmap(dataframe, x_col, y_col, agg_col, title, xlabel, ylabel):
 
 def analyze_weather_clothing_correlation(weather_data, clothes_df):
     """
-    Analyze the correlation between weather data and clothing usage.
+    Analyze the correlation between weather data and clothing usage using Matplotlib.
     """
     st.subheader("Correlation Analysis: Weather vs. Clothing Usage")
 
@@ -372,15 +372,24 @@ def analyze_weather_clothing_correlation(weather_data, clothes_df):
     grouped = merged_df.groupby([temp_ranges, "material", "style"]).size().reset_index(name="counts")
 
     # Pivot table for visualization
-    pivot_table = grouped.pivot_table(index=["material", "style"], columns="temp", values="counts", fill_value=0)
+    pivot_table = grouped.pivot(index=["material", "style"], columns="temp", values="counts").fillna(0)
 
-    # Plot a heatmap to visualize the correlation
-    plt.figure(figsize=(12, 6))
-    sns.heatmap(pivot_table, annot=True, fmt="d", cmap="coolwarm", linewidths=0.5)
-    plt.title("Clothing Usage vs. Temperature")
-    plt.xlabel("Temperature Ranges")
-    plt.ylabel("Material and Style")
-    st.pyplot(plt)
+    # Plot a heatmap with Matplotlib
+    fig, ax = plt.subplots(figsize=(12, 6))
+    cax = ax.matshow(pivot_table, cmap="coolwarm", aspect="auto")
+    plt.colorbar(cax, ax=ax)
+
+    # Set axis labels and titles
+    ax.set_title("Clothing Usage vs. Temperature", pad=20)
+    ax.set_xlabel("Temperature Ranges")
+    ax.set_ylabel("Material and Style")
+    ax.set_xticks(range(len(pivot_table.columns)))
+    ax.set_xticklabels(pivot_table.columns, rotation=45, ha="left")
+    ax.set_yticks(range(len(pivot_table.index)))
+    ax.set_yticklabels([f"{material} - {style}" for material, style in pivot_table.index])
+
+    # Render the plot in Streamlit
+    st.pyplot(fig)
 
     # Textual insights
     st.write("### Insights:")
@@ -444,7 +453,6 @@ with tab3:
         event_df["hour"] = event_df["start_time"].dt.hour
         plot_heatmap(event_df, "hour", "date", "title", "Daily Event Heatmap", "Hour of Day", "Date")
 
-    # Add this in tab3 under the "Closet Usage Trends" section
     if weather_data and clothes:
         clothes_df = pd.DataFrame(clothes)
         analyze_weather_clothing_correlation(weather_data, clothes_df)
