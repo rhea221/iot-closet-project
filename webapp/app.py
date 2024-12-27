@@ -8,6 +8,9 @@ import os
 import uuid
 from datetime import datetime, timezone
 import sys
+import seaborn as sns  # Add for heatmap
+import matplotlib.pyplot as plt  # For additional visualization
+from datetime import timedelta
 
 # Add the project root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -326,6 +329,16 @@ with tab2:
 
 
 # Database ------------------------------------------
+# Helper function to create a heatmap
+def plot_heatmap(dataframe, x_col, y_col, agg_col, title, xlabel, ylabel):
+    pivot_table = dataframe.pivot_table(index=y_col, columns=x_col, values=agg_col, aggfunc='count', fill_value=0)
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(pivot_table, annot=True, fmt="d", cmap="Blues")
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    st.pyplot(plt)
+
 with tab3:
     st.header("My Database")
 
@@ -349,13 +362,13 @@ with tab3:
             st.line_chart(data=df.set_index("created_at")[["temp", "feels_like"]])
 
         # Show the latest weather data as a table
-        st.subheader("Latest Weather Data")
-        st.dataframe(df[["created_at", "temp", "feels_like", "weather", "pop"]])
+        st.subheader("Weather Data Trends")
+        st.bar_chart(df["weather"].value_counts(), use_container_width=True)
     else:
         st.warning("No weather data found. Please check your data source.")
 
  # Calendar Events Section
-    st.subheader("Today's Events")
+    st.subheader("Calendar Event Trends")
 
     def fetch_calendar_events():
         """Fetch today's calendar events from Supabase."""
@@ -371,15 +384,34 @@ with tab3:
             st.error(f"Error fetching calendar events: {e}")
             return None
 
-    # Display calendar events
     calendar_events = fetch_calendar_events()
     if calendar_events:
-        # Convert data to DataFrame
-        events_df = pd.DataFrame(calendar_events)
-        events_df["start_time"] = pd.to_datetime(events_df["start_time"], errors="coerce")
-        events_df = events_df.dropna(subset=["start_time"]).sort_values(by="start_time")
+        event_df = pd.DataFrame(calendar_events)
+        event_df["start_time"] = pd.to_datetime(event_df["start_time"], errors="coerce")
+        event_df["duration"] = event_df["duration"].astype(float)
+        event_df["date"] = event_df["start_time"].dt.date
 
-        st.write("Today's Events")
-        st.dataframe(events_df[["title", "start_time"]])
-    else:
-        st.warning("No events to display.")
+        st.write("Daily Event Distribution")
+        daily_event_counts = event_df.groupby("date").size()
+        st.bar_chart(daily_event_counts)
+
+        st.write("Event Durations")
+        st.bar_chart(event_df["duration"])
+
+        st.write("Daily Event Heatmap")
+        event_df["hour"] = event_df["start_time"].dt.hour
+        plot_heatmap(event_df, "hour", "date", "title", "Daily Event Heatmap", "Hour of Day", "Date")
+
+    # CLOSET ITEM USAGE
+    st.subheader("Closet Usage Trends")
+    clothes = fetch_all_clothes()
+    if clothes:
+        clothes_df = pd.DataFrame(clothes)
+        if "tags" in clothes_df.columns:
+            tags = clothes_df["tags"].explode()
+            st.bar_chart(tags.value_counts(), use_container_width=True)
+
+        if "image_url" in clothes_df.columns:
+            clothes_df["type"] = clothes_df["tags"].apply(lambda x: x[0] if x else "Unknown")
+            st.write("Item Type Distribution")
+            st.bar_chart(clothes_df["type"].value_counts())
