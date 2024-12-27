@@ -350,7 +350,6 @@ def analyze_weather_clothing_correlation(weather_data, clothes_df):
     """
     Analyze the correlation between weather data and clothing usage with temperature as individual degree columns.
     """
-    st.subheader("Correlation Analysis: Weather vs. Clothing Usage")
 
     if not weather_data or clothes_df.empty:
         st.warning("Insufficient data for correlation analysis.")
@@ -365,19 +364,17 @@ def analyze_weather_clothing_correlation(weather_data, clothes_df):
     weather_df["date"] = weather_df["created_at"].dt.date
     weather_df["temp"] = weather_df["temp"].round().astype(int)  # Round temperature to nearest integer
 
-    # Analyze clothing item usage by name/material/style over dates
+    # Analyze clothing item usage by name over dates
     clothes_df["date"] = pd.to_datetime(clothes_df["created_at"], errors="coerce").dt.date
-    clothes_df["material"] = clothes_df["tags"].apply(lambda tags: next((tag for tag in tags if "🧵" in tag or "🎾" in tag or "👖" in tag), "Unknown"))
-    clothes_df["style"] = clothes_df["tags"].apply(lambda tags: next((tag for tag in tags if tag in ["🎽 Casual", "🤵 Formal", "💼 Work"]), "Unknown"))
 
     # Merge weather and clothing data on dates
     merged_df = pd.merge(clothes_df, weather_df, on="date", how="inner")
 
-    # Group clothing usage by temperature and names/materials/styles
-    grouped = merged_df.groupby(["temp", "name", "material", "style"]).size().reset_index(name="counts")
+    # Group clothing usage by temperature and names
+    grouped = merged_df.groupby(["temp", "name"]).size().reset_index(name="counts")
 
     # Pivot table for visualization
-    pivot_table = grouped.pivot(index=["name", "material", "style"], columns="temp", values="counts").fillna(0)
+    pivot_table = grouped.pivot(index="name", columns="temp", values="counts").fillna(0)
 
     # Plot a heatmap with Matplotlib
     fig, ax = plt.subplots(figsize=(12, 8))
@@ -387,19 +384,87 @@ def analyze_weather_clothing_correlation(weather_data, clothes_df):
     # Set axis labels and titles
     ax.set_title("Clothing Usage vs. Temperature (Per °C)", pad=20)
     ax.set_xlabel("Temperature (°C)")
-    ax.set_ylabel("Clothing Item)")
+    ax.set_ylabel("Clothing Item")
     ax.set_xticks(range(len(pivot_table.columns)))
     ax.set_xticklabels(pivot_table.columns, rotation=45, ha="right")
     ax.set_yticks(range(len(pivot_table.index)))
-    ax.set_yticklabels([f"{name}" for name in pivot_table.index])
+    ax.set_yticklabels(pivot_table.index)
 
     # Render the plot in Streamlit
     st.pyplot(fig)
 
     # Textual insights
     st.write("### Insights:")
-    st.write("- Analyze the frequency of specific clothing items (e.g., names) and styles used at each temperature.")
-    st.write("- Observe which materials (e.g., wool, cotton) and styles (e.g., casual, formal) are more common for specific temperatures.")
+    st.write("- Analyze the frequency of specific clothing items used at each temperature.")
+    st.write("- Observe which items are popular across various weather conditions.")
+
+
+def analyze_event_category_clothing_correlation(event_data, clothes_df):
+    """
+    Analyze the correlation between event categories and clothing usage.
+    """
+
+    if not event_data or clothes_df.empty:
+        st.warning("Insufficient data for correlation analysis.")
+        return
+
+    # Convert event data to a DataFrame
+    event_df = pd.DataFrame(event_data)
+    event_df["start_time"] = pd.to_datetime(event_df["start_time"], errors="coerce")
+    event_df["date"] = event_df["start_time"].dt.date
+
+    # Categorize events
+    def get_event_category(title):
+        categories = {
+            "work": ["meeting", "office", "work"],
+            "dining": ["brunch", "lunch", "dinner"],
+            "social": ["party", "club", "gathering", "games"],
+            "sport": ["gym", "exercise", "running"],
+            "leisure": ["movie", "museum", "picnic", "festival"],
+            "appointment": ["appointment"],
+            "festive": ["christmas", "birthday", "new years"]
+        }
+        for category, keywords in categories.items():
+            if any(keyword in title.lower() for keyword in keywords):
+                return category
+        return "other"
+
+    event_df["event_category"] = event_df["title"].apply(get_event_category)
+
+    # Analyze clothing item usage by event category and name
+    clothes_df["date"] = pd.to_datetime(clothes_df["created_at"], errors="coerce").dt.date
+
+    # Merge event and clothing data on dates
+    merged_df = pd.merge(clothes_df, event_df, on="date", how="inner")
+
+    # Group clothing usage by event category and name
+    grouped = merged_df.groupby(["event_category", "name"]).size().reset_index(name="counts")
+
+    # Pivot table for visualization
+    pivot_table = grouped.pivot(index="name", columns="event_category", values="counts").fillna(0)
+
+    # Plot a heatmap with Matplotlib
+    fig, ax = plt.subplots(figsize=(12, 8))
+    cax = ax.matshow(pivot_table, cmap="coolwarm", aspect="auto")
+    plt.colorbar(cax, ax=ax)
+
+    # Set axis labels and titles
+    ax.set_title("Clothing Usage vs. Event Categories", pad=20)
+    ax.set_xlabel("Event Category")
+    ax.set_ylabel("Clothing Item")
+    ax.set_xticks(range(len(pivot_table.columns)))
+    ax.set_xticklabels(pivot_table.columns, rotation=45, ha="right")
+    ax.set_yticks(range(len(pivot_table.index)))
+    ax.set_yticklabels(pivot_table.index)
+
+    # Render the plot in Streamlit
+    st.pyplot(fig)
+
+    # Textual insights
+    st.write("### Insights:")
+    st.write("- Observe how specific event categories (e.g., 'work', 'leisure') correlate with clothing items.")
+    st.write("- Identify which clothing items are frequently used for particular event categories.")
+
 
 
 with tab3:
@@ -459,5 +524,11 @@ with tab3:
         plot_heatmap(event_df, "hour", "date", "title", "Daily Event Heatmap", "Hour of Day", "Date")
 
     if weather_data and clothes:
+        st.subheader("Weather vs. Clothing Usage")
         clothes_df = pd.DataFrame(clothes)
         analyze_weather_clothing_correlation(weather_data, clothes_df)
+
+    if calendar_events and clothes:
+        st.subheader("Event vs. Clothing Usage")
+        clothes_df = pd.DataFrame(clothes)
+        analyze_event_category_clothing_correlation(calendar_events, clothes_df)
