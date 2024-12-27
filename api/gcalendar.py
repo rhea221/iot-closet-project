@@ -19,7 +19,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     raise Exception("Supabase credentials are missing. Check your environment variables.")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Path to your service account JSON key file
+# service account JSON key
 SERVICE_ACCOUNT_FILE = 'service_account_key.json'
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
@@ -31,9 +31,7 @@ def authenticate_google_calendar():
     return service
 
 def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
-    """
-    Fetch all upcoming events for the remainder of the current day from Google Calendar.
-    """
+    #Fetches all upcoming events for the remainder of the current day from Google Calendar.
     service = authenticate_google_calendar()
     now = datetime.now(pytz.UTC)
     end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
@@ -65,17 +63,15 @@ def get_upcoming_events_today(calendar_id='rhea.p3rk@gmail.com'):
     return event_details
 
 def calculate_duration(start, end):
-    """
-    Calculate the duration of an event.
-    """
-    # Use dateutil.parser to handle various datetime formats
+    # Calculates the duration of an event.
+    # dateutil.parser is used to handle various datetime formats
     start_time = parser.isoparse(start.get("dateTime", start.get("date")))
     end_time = parser.isoparse(end.get("dateTime", end.get("date")))
 
     return (end_time - start_time).total_seconds() / 3600  # Return duration in hours
 
 def fetch_existing_events():
-    """Fetch existing calendar events from Supabase for today."""
+    # Fetch existing calendar events from Supabase for today
     now = datetime.now(pytz.UTC)
     start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
     try:
@@ -95,8 +91,9 @@ def fetch_existing_events():
 
 
 def filter_new_events(events, existing_events):
-    """Filter out events that are already in the database."""
-    # Create a set of existing event keys (normalized)
+    # Filters out events that are already in the database
+
+    # Creating a set of existing event keys (normalized)
     existing_event_keys = {
         (event["google-event-id"], event["start_time"], event["title"])
         for event in existing_events
@@ -118,7 +115,7 @@ def filter_new_events(events, existing_events):
 
 
 def save_events_to_supabase(events):
-    """Save today's events to the Supabase database."""
+    # Saves today's events to Supabase
     table_name = "calendar-events"
     try:
         for event in events:
@@ -135,7 +132,6 @@ def save_events_to_supabase(events):
     except Exception as e:
         print(f"Error saving events to Supabase: {e}")
 
-# Example usage
 if __name__ == "__main__":
     events_today = get_upcoming_events_today()
     if events_today:

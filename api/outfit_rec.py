@@ -38,12 +38,12 @@ attributes = {
 
 # Fetch Data from Supabase
 def fetch_weather():
-    """Fetch the most recent weather data from Supabase."""
+    # Fetch the most recent weather data from Supabase
     response = supabase.table("weather-data").select("*").order("created_at", desc=True).limit(1).execute()
     return response.data[0] if response.data else None
 
 def fetch_remaining_events():
-    """Fetch remaining calendar events for the day from Supabase."""
+    # Fetch remaining calendar events for the day from Supabase
     now = datetime.now(timezone.utc)
     response = supabase.table("calendar-events").select("*").execute()
     events = response.data or []
@@ -56,7 +56,7 @@ def fetch_remaining_events():
 
 
 def fetch_clothing_items():
-    """Fetch clothing items stored in the Supabase closet-items table."""
+    # Fetch clothing items stored in the Supabase closet-items table
     try:
         response = supabase.table("closet-items").select("*").or_(
             "status.is.null,status.neq.laundry"
@@ -75,7 +75,7 @@ def fetch_clothing_items():
 
 
 def calculate_dominant_event_category(events):
-    """Determine the dominant category of events."""
+    # Determine the dominant category of events
     categories = {
         "university": [],
         "work": ["meeting", "office", "work"],
@@ -104,7 +104,7 @@ def calculate_dominant_event_category(events):
             if any(keyword in title for keyword in keywords):
                 category_count[category] += duration
                 if category == "sport":
-                    sports_priority = True  # Mark if a sports event is present
+                    sports_priority = True  # Marked if a sports event is present
 
     # Prioritize sports category
     if sports_priority:
@@ -116,7 +116,7 @@ def calculate_dominant_event_category(events):
 
 
 def get_images_from_recommendation(recommendations, clothing_items):
-    """Retrieve clothing items from Supabase matching recommended tags and categories."""
+    # Retrieve clothing items from Supabase matching recommended tags and categories
     selected_items = {}
     used_items = set()  # Track already selected items to avoid duplicates
 
@@ -158,13 +158,13 @@ def get_images_from_recommendation(recommendations, clothing_items):
                 best_match = {
                     "image_url": item["image_url"],
                     "tags": item_tags,
-                    "name": item.get("name", "Unknown")  # Add name
+                    "name": item.get("name", "Unknown")  
                 }
                 best_match_score = match_score
 
         if best_match:
             selected_items[category] = best_match
-            used_items.add(best_match["image_url"])  # Mark item as used
+            used_items.add(best_match["image_url"])  # Marks item as used
         
 
     return selected_items
@@ -173,11 +173,10 @@ def get_images_from_recommendation(recommendations, clothing_items):
 # OpenAI Recommendation Logic
 def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
     
-    """Use OpenAI to recommend clothing items based on weather, events, and available tags."""
     # Format weather data
     weather_context = f"The current temperature is {weather['temp']}°C with {weather['weather']}."
 
-    # Format remaining events with fallback for missing keys
+    # For NO EVENTS
     if not remaining_events:
         # No events left for today, generate a weather-based quick statement
         prompt = (
@@ -188,7 +187,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
     # Call OpenAI API
         try:
             response = openai.chat.completions.create(
-                model="gpt-4",  # Replace with gpt-3.5-turbo if gpt-4 access is unavailable
+                model="gpt-4",  
                 messages=[
                     {"role": "system", "content": "You are a personal assistant giving me advice."},
                     {"role": "user", "content": prompt},
@@ -198,9 +197,9 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
             )
             # Extract general recommendation text
             general_recommendation = response.choices[0].message.content.strip()
-            # print("Raw OpenAI Response:", general_recommendation)
+            # print("Raw OpenAI Response:", general_recommendation) # debugging
 
-            # Return a structured format for compatibility
+            # Returning sturctured format
             return {
                 "general_recommendation": general_recommendation,
                 "outfit_recommendation": None
@@ -209,7 +208,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
         except Exception as e:
             raise Exception(f"Error generating clothing recommendation: {str(e)}")
     
-    # For cases with remaining events, process outfit recommendations
+    # For YES REMAINING EVENTS, process outfit recommendations
     try:
         # Calculate dominant event category and average event time
         dominant_category = calculate_dominant_event_category(remaining_events)
@@ -228,7 +227,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
         # Debugging: Print available tags by category
         # print("Available Tags by Category:", available_tags_by_category)
 
-        # Create prompt for OpenAI
+        # OpenAI prompt
         prompt = (
             f"The weather is {weather['temp']}°C with {weather['weather']}.\n"
             f"The dominant event category is '{dominant_category}'.\n"
@@ -245,7 +244,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
             f"- Fits: {attributes['fit']}\n"
             f"Recommend one top, one bottom, one jacket, and one pair of shoes, ensuring they align with the weather, the dominant event category, and these attributes.\n"
             f"Output the recommendation in JSON format like this:\n"
-            f"["
+            f"[" #always returns JSON format
             f"  {{\"tags\": \"[tag1], [tag2]\", \"category\": \"top\"}},"
             f"  {{\"tags\": \"[tag3], [tag4]\", \"category\": \"bottom\"}},"
             f"  {{\"tags\": \"[tag5], [tag6]\", \"category\": \"jacket\"}},"
@@ -259,7 +258,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
 
         # Call OpenAI API
         response = openai.chat.completions.create(
-            model="gpt-4",  # Replace with gpt-3.5-turbo if gpt-4 access is unavailable
+            model="gpt-4",  
             messages=[
                 {"role": "system", "content": "You are a fashion stylist and clothing analyst."},
                 {"role": "user", "content": prompt},
@@ -293,7 +292,7 @@ def recommend_clothing_with_openai(weather, remaining_events, clothing_items):
     except Exception as e:
         raise Exception(f"Error generating recommendation: {str(e)}")
     
-# Main Logic
+# Main Logic ---------------------------------------------------------
 def main():
     weather = fetch_weather()
     # print("Weather Data:", weather)

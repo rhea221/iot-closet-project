@@ -8,10 +8,10 @@ import os
 import uuid
 from datetime import datetime, timezone
 import sys
-import matplotlib.pyplot as plt  # For additional visualization
+import matplotlib.pyplot as plt 
 from datetime import timedelta
 
-# Add the project root to sys.path
+# Adding the project root to sys.path to connect 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from api.outfit_rec import main as fetch_recommendation, fetch_weather, fetch_remaining_events
 
@@ -27,16 +27,15 @@ if not supabase_url or not supabase_key:
     st.stop()
 supabase: Client = create_client(supabase_url, supabase_key)
 
-# -----------------------------------
-# Helper Functions
-# -----------------------------------
+
+# Helper Functions -----------------------------------
 
 def generate_unique_filename(extension):
-    """Generate a unique filename using UUID."""
+    # Generates a unique filename using UUID (used for weather-data)
     return f"{uuid.uuid4()}.{extension}"
 
 def fetch_calendar_events():
-    """Fetch all calendar events from the Supabase table."""
+    # Fetches all calendar events from Supabase 
     try:
         table_name = "calendar-events"
         response = supabase.table(table_name).select("*").execute()
@@ -50,7 +49,7 @@ def fetch_calendar_events():
         return None
 
 def fetch_all_clothes():
-    """Fetch all clothing items from Supabase."""
+    # Fetches all clothing items from Supabase
     try:
         response = supabase.table("closet-items").select("*").execute()
         return response.data or []
@@ -59,22 +58,22 @@ def fetch_all_clothes():
         return []
 
 def upload_image_to_supabase(file, file_name):
-    """Upload image to Supabase and return the public URL."""
+    # Uploads image to Supabase and return a public URL
     try:
         response = supabase.storage.from_("closet-images").upload(file_name, file)
         if not response.path:
             raise Exception("Upload failed. No path returned.")
         public_url = f"{supabase_url}/storage/v1/object/public/closet-images/{file_name}"
-        return public_url
+        return public_url 
     except Exception as e:
         st.error(f"Error uploading image: {e}")
         return None
 
 def save_image_metadata_to_supabase(image_url, tags, name):
-    """Save image metadata to Supabase database."""
+    # Saves image metadata to Supabase database
     try:
         data = {
-            "image_url": image_url,
+            "image_url": image_url, # image URL created
             "tags": tags,  # Save tags as a JSON array
             "name": name,  # Save the clothing item's name
             "created_at": datetime.now(timezone.utc).isoformat()
@@ -86,7 +85,7 @@ def save_image_metadata_to_supabase(image_url, tags, name):
         return False
 
 def fetch_weather_data():
-    """Fetch current weather data from the Supabase table."""
+    # Fetches current weather data from Supabase
     try:
         table_name = "weather-data"
         response = supabase.table(table_name).select("*").execute()
@@ -96,7 +95,7 @@ def fetch_weather_data():
         return None
 
 def send_to_laundry(selected_items):
-    """Mark selected items as 'laundry' in Supabase."""
+    # Marks selected items as 'laundry' in Supabase
     try:
         for item in selected_items:
             supabase.table("closet-items").update({"status": "laundry"}).match({"id": item["id"]}).execute()
@@ -105,7 +104,7 @@ def send_to_laundry(selected_items):
         st.error(f"Error sending items to laundry: {e}")
 
 def return_from_laundry(selected_laundry_items):
-    """Update the status of selected laundry items to make them available."""
+    # Updates the status of selected laundry items to make them available
     try:
         for item in selected_laundry_items:
             supabase.table("closet-items").update({"status": None}).match({"id": item["id"]}).execute()
@@ -114,7 +113,7 @@ def return_from_laundry(selected_laundry_items):
         st.error(f"Error returning items from laundry: {e}")
 
 def plot_heatmap(dataframe, x_col, y_col, agg_col, title, xlabel, ylabel):
-    """Create a heatmap from a pivot table."""
+    # Creates a heatmap from a pivot table
     pivot_table = dataframe.pivot_table(index=y_col, columns=x_col, values=agg_col, aggfunc='count', fill_value=0)
     plt.figure(figsize=(12, 8))
     plt.imshow(pivot_table, cmap='Blues', interpolation='nearest')
@@ -126,9 +125,8 @@ def plot_heatmap(dataframe, x_col, y_col, agg_col, title, xlabel, ylabel):
     plt.yticks(range(len(pivot_table.index)), pivot_table.index)
     st.pyplot(plt)
 
-# -----------------------------------
-# Streamlit Tabs
-# -----------------------------------
+
+# Streamlit Tabs -----------------------------------
 
 st.title("IoT Closet Manager")
 
@@ -181,13 +179,12 @@ with tab1:
             st.error(f"Error fetching data: {e}")
 
 
-
     if st.button("Get Outfit Recommendation"):
         with st.spinner("Fetching recommendation..."):
             try:
                 recommendations = fetch_recommendation()
 
-                # Handle general recommendation
+                # Handles general recommendation
                 if isinstance(recommendations, str):
                     st.success("Recommendation Generated!")
                     st.text_area("General Recommendation", recommendations, height=150)
@@ -210,7 +207,7 @@ with tab1:
 
 
 with tab2:
-    # Upload Image Section
+    # Uploading Image Section
     uploaded_file = st.file_uploader("Upload a clothing item...", type=["jpg", "jpeg", "png"])
     if uploaded_file is not None:
         # Display the uploaded image
@@ -276,7 +273,7 @@ with tab2:
 
         # Final confirmation to save
         if st.button("Confirm and Save Tags"):
-            if item_name:  # Ensure the user has entered a name for the item
+            if item_name:  # Ensure name is entered
                 if save_image_metadata_to_supabase(st.session_state["image_url"], tags, item_name):
                     st.success("Tags saved successfully!")
                     # Clear session state after saving
@@ -290,11 +287,11 @@ with tab2:
 
     st.subheader("My Closet")
 
-    # Fetch all clothing items
+    # Fetches all clothing items
     clothes = fetch_all_clothes()
 
     if clothes:
-        # Display clothes not in laundry
+        # Displays clothes not in laundry
         available_clothes = [item for item in clothes if item.get("status") != "laundry"]
         selected_for_laundry = []
 
@@ -308,11 +305,11 @@ with tab2:
                 if checkbox:
                     selected_for_laundry.append(item)
 
-        # Send selected items to laundry
+        # Sends selected items to laundry
         if st.button("Send to Laundry"):
             send_to_laundry(selected_for_laundry)
 
-    # Fetch items currently in laundry
+    # Fetches items currently in laundry
     try:
         laundry_items = [item for item in clothes if item.get("status") == "laundry"]
         if not laundry_items:
@@ -340,9 +337,7 @@ with tab2:
 # Database ------------------------------------------
 
 def analyze_calendar_event_additions(events_data):
-    """
-    Analyze how frequently new calendar events are added over time.
-    """
+    # Analyses how frequently new calendar events are added over time.
     if not events_data:
         st.warning("No calendar event data available for analysis.")
         return
@@ -356,34 +351,32 @@ def analyze_calendar_event_additions(events_data):
     events_df["date_added"] = events_df["created_at"].dt.date
     grouped = events_df.groupby("date_added").size().reset_index(name="new_events")
 
-    # Plot the data
+    # Data plotting
     st.line_chart(data=grouped.set_index("date_added"), use_container_width=True)
 
 def analyze_closet_item_totals(closet_data):
-    """
-    Analyze the total number of closet items over time to track spending habits.
-    """
+    # Analyses the total number of closet items over time to track spending habits.
 
     if not closet_data:
         st.warning("No closet item data available for analysis.")
         return
 
-    # Convert closet data to DataFrame
+    # Converts closet data to DataFrame
     closet_df = pd.DataFrame(closet_data)
     closet_df["created_at"] = pd.to_datetime(closet_df["created_at"], errors="coerce")
     closet_df.dropna(subset=["created_at"], inplace=True)
 
-    # Group by date (only date part, exclude time) for aggregation
+    # Groups by date (only date part, exclude time) for aggregation
     closet_df["date_added"] = closet_df["created_at"].dt.date
     grouped = closet_df.groupby("date_added").size().reset_index(name="new_items")
 
-    # Calculate cumulative total for total items over time
+    # Calculates cumulative total for total items over time
     grouped["total_items"] = grouped["new_items"].cumsum()
 
     # Plot the data
     st.line_chart(data=grouped.set_index("date_added")[["total_items"]], use_container_width=True)
 
-# Fetch weather and calendar data once at the start to reuse across tabs
+# Fetches weather and calendar data once at the start to reuse across tabs
 weather_data = fetch_weather_data()
 calendar_events = fetch_calendar_events()
 closet_items = fetch_all_clothes()
@@ -429,7 +422,7 @@ with tab4:
         # Convert data to DataFrame
         weather_df = pd.DataFrame(weather_data)
 
-        # Ensure 'created_at' is in datetime format
+        # Ensures 'created_at' is in datetime format
         weather_df["created_at"] = pd.to_datetime(weather_df["created_at"], errors="coerce")
         weather_df.dropna(subset=["created_at"], inplace=True)
 
