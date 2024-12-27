@@ -62,18 +62,17 @@ def fetch_clothing_items():
             "status.is.null,status.neq.laundry"
         ).execute()
 
-        # Check for errors in the response
-        if hasattr(response, "error") and response.error:
-            raise Exception(f"Supabase query error: {response.error}")
+        # Normalize data to include a default name if missing
+        clothing_items = response.data or []
+        for item in clothing_items:
+            if "name" not in item or not item["name"]:
+                item["name"] = "Unnamed Item"  # Default name for items without a name
 
-        # Access and return the data
-        if response.data:
-            return response.data
-        else:
-            raise Exception("No clothing items available.")
+        return clothing_items
     except Exception as e:
         print(f"Error fetching clothing items: {e}")
         return []
+
 
 
 
