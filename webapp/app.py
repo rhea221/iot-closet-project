@@ -97,7 +97,7 @@ def fetch_weather_data():
 
 st.title("IoT Closet Manager")
 
-tab1, tab2, tab3 = st.tabs(["Recommendations", "My Closet", "My Database"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["Recommendations", "My Closet", "Trends Overview", "Time-Series Analysis", "Correlation Analysis"])
 
 # Recommendations --------------------------------
 # Define a dark mode style
@@ -350,7 +350,6 @@ def analyze_calendar_event_additions(events_data):
     """
     Analyze how frequently new calendar events are added over time.
     """
-    st.subheader("Calendar Events - New Additions Over Time")
 
     if not events_data:
         st.warning("No calendar event data available for analysis.")
@@ -372,7 +371,6 @@ def analyze_closet_item_additions(closet_data):
     """
     Analyze how frequently new closet items are uploaded over time.
     """
-    st.subheader("Closet Items - New Additions Over Time")
 
     if not closet_data:
         st.warning("No closet item data available for analysis.")
@@ -500,78 +498,89 @@ def analyze_event_category_clothing_correlation(event_data, clothes_df):
     st.pyplot(fig)
 
 
+# Fetch weather and calendar data once at the start to reuse across tabs
+weather_data = fetch_weather_data()
+calendar_events = fetch_calendar_events()
+closet_items = fetch_all_clothes()
+
+# Tab 3: Trends Overview
 with tab3:
-    st.header("My Database")
+    st.header("Trends Overview")
 
-    # Fetch data and display
-    weather_data = fetch_weather_data()
-
+    # Weather Trends
     if weather_data:
-        # Convert data to DataFrame
-        df = pd.DataFrame(weather_data)
-
-        # Ensure 'created_at' is in datetime format
-        df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
-        df = df.dropna(subset=["created_at"])  # Remove invalid dates
-
-        # Sort by 'created_at' for proper time-series plotting
-        df = df.sort_values(by="created_at")
-
-        # Line chart for temperature trends
-        st.subheader("Temperature Trends Over Time")
-        if "temp" in df and "created_at" in df:
-            st.line_chart(data=df.set_index("created_at")[["temp", "feels_like"]])
-
-        # Show the latest weather data as a table
         st.subheader("Weather Data Trends")
-        st.bar_chart(df["weather"].value_counts(), use_container_width=True)
-    else:
-        st.warning("No weather data found. Please check your data source.")
+        weather_df = pd.DataFrame(weather_data)
 
+        # Show weather counts as a bar chart
+        st.bar_chart(weather_df["weather"].value_counts(), use_container_width=True)
 
- # Calendar Events Section
-    
-
-    def fetch_calendar_events():
-        """Fetch today's calendar events from Supabase."""
-        table_name = "calendar-events"
-        try:
-            response = supabase.table(table_name).select("*").execute()
-            if response.data:
-                return response.data
-            else:
-                st.warning("No calendar events available.")
-                return None
-        except Exception as e:
-            st.error(f"Error fetching calendar events: {e}")
-            return None
-
-    calendar_events = fetch_calendar_events()
-    closet_items = fetch_all_clothes()
-
-    if calendar_events:
-        analyze_calendar_event_additions(calendar_events)
-
-    if closet_items:
-        analyze_closet_item_additions(closet_items)
-
+    # Calendar Event Trends
     if calendar_events:
         st.subheader("Calendar Event Trends")
         event_df = pd.DataFrame(calendar_events)
+
+        # Ensure start_time is in datetime format
         event_df["start_time"] = pd.to_datetime(event_df["start_time"], errors="coerce")
         event_df["duration"] = event_df["duration"].astype(float)
         event_df["date"] = event_df["start_time"].dt.date
 
+        # Extract hours for heatmap
         event_df["hour"] = event_df["start_time"].dt.hour
-        plot_heatmap(event_df, "hour", "date", "title", "Daily Event Heatmap", "Hour of Day", "Date")
 
-    if weather_data and clothes:
+        # Plot heatmap for event timings
+        plot_heatmap(event_df, "hour", "date", "title", "Daily Event Heatmap", "Hour of Day", "Date")
+    else:
+        st.warning("No calendar events found. Please check your data source.")
+
+# Tab 4: Time-Series Analysis
+with tab4:
+    st.header("Time-Series Analysis")
+
+    # Weather Time-Series Analysis
+    if weather_data:
+        # Convert data to DataFrame
+        weather_df = pd.DataFrame(weather_data)
+
+        # Ensure 'created_at' is in datetime format
+        weather_df["created_at"] = pd.to_datetime(weather_df["created_at"], errors="coerce")
+        weather_df.dropna(subset=["created_at"], inplace=True)
+
+        # Sort by 'created_at' for proper time-series plotting
+        weather_df = weather_df.sort_values(by="created_at")
+
+        # Line chart for temperature trends
+        st.subheader("Temperature Trends Over Time")
+        if "temp" in weather_df and "created_at" in weather_df:
+            st.line_chart(data=weather_df.set_index("created_at")[["temp", "feels_like"]])
+    else:
+        st.warning("No weather data found. Please check your data source.")
+
+    # Calendar and Closet Trends
+    if calendar_events:
+        st.subheader("Calendar Updates Over Time")
+        analyze_calendar_event_additions(calendar_events)
+
+    if closet_items:
+        st.subheader("New Clothes Over Time")
+        analyze_closet_item_additions(closet_items)
+
+# Tab 5: Correlations Analysis
+with tab5:
+    st.header("Correlations Analysis")
+
+    # Weather vs. Clothing Usage
+    if weather_data and closet_items:
         st.subheader("Weather vs. Clothing Usage")
-        clothes_df = pd.DataFrame(clothes)
+        clothes_df = pd.DataFrame(closet_items)
+
+        # Analyze weather-clothing correlations
         analyze_weather_clothing_correlation(weather_data, clothes_df)
 
-    if calendar_events and clothes:
+    # Event vs. Clothing Usage
+    if calendar_events and closet_items:
         st.subheader("Event vs. Clothing Usage")
-        clothes_df = pd.DataFrame(clothes)
-        analyze_event_category_clothing_correlation(calendar_events, clothes_df)
+        clothes_df = pd.DataFrame(closet_items)
 
+        # Analyze event-clothing correlations
+        analyze_event_category_clothing_correlation(calendar_events, clothes_df)
