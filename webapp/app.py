@@ -18,25 +18,46 @@ from api.outfit_rec import main as fetch_recommendation, fetch_weather, fetch_re
 # Load environment variables
 load_dotenv(dotenv_path="config/.env")
 
-# Supabase Data Storage ----------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------
-
 # Initialize Supabase
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_KEY")
-
 
 if not supabase_url or not supabase_key:
     st.error("Supabase credentials are missing. Check your environment variables.")
     st.stop()
 supabase: Client = create_client(supabase_url, supabase_key)
 
-# Helper functions
+# -----------------------------------
+# Helper Functions
+# -----------------------------------
+
 def generate_unique_filename(extension):
     """Generate a unique filename using UUID."""
     return f"{uuid.uuid4()}.{extension}"
 
-# My Closet --------------------------------------
+def fetch_calendar_events():
+    """Fetch all calendar events from the Supabase table."""
+    try:
+        table_name = "calendar-events"
+        response = supabase.table(table_name).select("*").execute()
+        if response.data:
+            return response.data
+        else:
+            print("No calendar events available.")
+            return None
+    except Exception as e:
+        print(f"Error fetching calendar events: {e}")
+        return None
+
+def fetch_all_clothes():
+    """Fetch all clothing items from Supabase."""
+    try:
+        response = supabase.table("closet-items").select("*").execute()
+        return response.data or []
+    except Exception as e:
+        st.error(f"Error fetching clothes: {e}")
+        return []
+
 def upload_image_to_supabase(file, file_name):
     """Upload image to Supabase and return the public URL."""
     try:
@@ -58,42 +79,56 @@ def save_image_metadata_to_supabase(image_url, tags, name):
             "name": name,  # Save the clothing item's name
             "created_at": datetime.now(timezone.utc).isoformat()
         }
-        # Insert data into Supabase table
         response = supabase.table("closet-items").insert(data).execute()
-
-        # Check for errors in the response
-        if hasattr(response, "status_code") and response.status_code != 201:
-            raise Exception(f"Error: {response.json()}")
-
-        # Log success debugging
-        # st.info(f"Supabase response: {response.data}")
-
         return True
     except Exception as e:
         st.error(f"Error saving metadata to Supabase: {e}")
         return False
 
-
-# Weather Data ------------------------------------------
 def fetch_weather_data():
     """Fetch current weather data from the Supabase table."""
-    table_name = "weather-data"
     try:
-        # Fetch the data from Supabase
+        table_name = "weather-data"
         response = supabase.table(table_name).select("*").execute()
-
-        # Check if the response contains data
-        if response.data:
-            return response.data
-        else:
-            st.warning("No weather data available in the table.")
-            return None
+        return response.data if response.data else None
     except Exception as e:
-        st.error(f"Error fetching data: {e}")
+        st.error(f"Error fetching weather data: {e}")
         return None
 
-# Streamlit App ------------------------------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------------------------------------------
+def send_to_laundry(selected_items):
+    """Mark selected items as 'laundry' in Supabase."""
+    try:
+        for item in selected_items:
+            supabase.table("closet-items").update({"status": "laundry"}).match({"id": item["id"]}).execute()
+        st.success("Selected items sent to laundry!")
+    except Exception as e:
+        st.error(f"Error sending items to laundry: {e}")
+
+def return_from_laundry(selected_laundry_items):
+    """Update the status of selected laundry items to make them available."""
+    try:
+        for item in selected_laundry_items:
+            supabase.table("closet-items").update({"status": None}).match({"id": item["id"]}).execute()
+        st.success("Selected items returned to the closet!")
+    except Exception as e:
+        st.error(f"Error returning items from laundry: {e}")
+
+def plot_heatmap(dataframe, x_col, y_col, agg_col, title, xlabel, ylabel):
+    """Create a heatmap from a pivot table."""
+    pivot_table = dataframe.pivot_table(index=y_col, columns=x_col, values=agg_col, aggfunc='count', fill_value=0)
+    plt.figure(figsize=(12, 8))
+    plt.imshow(pivot_table, cmap='Blues', interpolation='nearest')
+    plt.colorbar()
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.xticks(range(len(pivot_table.columns)), pivot_table.columns, rotation=90)
+    plt.yticks(range(len(pivot_table.index)), pivot_table.index)
+    st.pyplot(plt)
+
+# -----------------------------------
+# Streamlit Tabs
+# -----------------------------------
 
 st.title("IoT Closet Manager")
 
@@ -173,35 +208,6 @@ with tab1:
             except Exception as e:
                 st.error(f"Error generating recommendation: {e}")
 
-# My Closet --------------------------------------
-# Fetch all clothing items
-def fetch_all_clothes():
-    """Fetch all clothing items from Supabase."""
-    try:
-        response = supabase.table("closet-items").select("*").execute()
-        return response.data or []
-    except Exception as e:
-        st.error(f"Error fetching clothes: {e}")
-        return []
-
-# Update laundry status
-def send_to_laundry(selected_items):
-    """Mark selected items as 'laundry' in Supabase."""
-    try:
-        for item in selected_items:
-            supabase.table("closet-items").update({"status": "laundry"}).match({"id": item["id"]}).execute()
-        st.success("Selected items sent to laundry!")
-    except Exception as e:
-        st.error(f"Error sending items to laundry: {e}")
-
-def return_from_laundry(selected_laundry_items):
-    """Update the status of selected laundry items to make them available."""
-    try:
-        for item in selected_laundry_items:
-            supabase.table("closet-items").update({"status": None}).eq("id", item["id"]).execute()
-        st.success("Selected items returned to the closet!")
-    except Exception as e:
-        st.error(f"Error returning items from laundry: {e}")
 
 with tab2:
     # Upload Image Section
@@ -333,24 +339,11 @@ with tab2:
 
 
 # Database ------------------------------------------
-# Helper function to create a heatmap
-def plot_heatmap(dataframe, x_col, y_col, agg_col, title, xlabel, ylabel):
-    pivot_table = dataframe.pivot_table(index=y_col, columns=x_col, values=agg_col, aggfunc='count', fill_value=0)
-    plt.figure(figsize=(12, 8))
-    plt.imshow(pivot_table, cmap='Blues', interpolation='nearest')
-    plt.colorbar()
-    plt.title(title)
-    plt.xlabel(xlabel)
-    plt.ylabel(ylabel)
-    plt.xticks(range(len(pivot_table.columns)), pivot_table.columns, rotation=90)
-    plt.yticks(range(len(pivot_table.index)), pivot_table.index)
-    st.pyplot(plt)
 
 def analyze_calendar_event_additions(events_data):
     """
     Analyze how frequently new calendar events are added over time.
     """
-
     if not events_data:
         st.warning("No calendar event data available for analysis.")
         return
@@ -497,11 +490,12 @@ def analyze_event_category_clothing_correlation(event_data, clothes_df):
     # Render the plot in Streamlit
     st.pyplot(fig)
 
-
 # Fetch weather and calendar data once at the start to reuse across tabs
 weather_data = fetch_weather_data()
 calendar_events = fetch_calendar_events()
 closet_items = fetch_all_clothes()
+
+# ------------------------------------------------------
 
 # Tab 3: Trends Overview
 with tab3:
