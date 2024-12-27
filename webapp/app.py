@@ -299,7 +299,7 @@ with tab2:
             with col1:
                 st.image(item["image_url"], width=100, caption=" ")
             with col2:
-                checkbox = st.checkbox(f"ID: {item['id']} | Tags: {', '.join(item['tags'])}", key=f"checkbox_{item['id']}")
+                checkbox = st.checkbox(f"{item['name']}", key=f"checkbox_{item['id']}")
                 if checkbox:
                     selected_for_laundry.append(item)
 
@@ -320,7 +320,7 @@ with tab2:
                 with col1:
                     st.image(item["image_url"], width=100, caption=" ")
                 with col2:
-                    checkbox = st.checkbox(f"{item['tags']}", key=f"laundry-{item['id']}")
+                    checkbox = st.checkbox(f"{item['name']}", key=f"laundry-{item['id']}")
                     if checkbox:
                         selected_items.append(item)
 
@@ -393,12 +393,6 @@ def analyze_weather_clothing_correlation(weather_data, clothes_df):
     # Render the plot in Streamlit
     st.pyplot(fig)
 
-    # Textual insights
-    st.write("### Insights:")
-    st.write("- Analyze the frequency of specific clothing items used at each temperature.")
-    st.write("- Observe which items are popular across various weather conditions.")
-
-
 def analyze_event_category_clothing_correlation(event_data, clothes_df):
     """
     Analyze the correlation between event categories and clothing usage.
@@ -460,11 +454,6 @@ def analyze_event_category_clothing_correlation(event_data, clothes_df):
     # Render the plot in Streamlit
     st.pyplot(fig)
 
-    # Textual insights
-    st.write("### Insights:")
-    st.write("- Observe how specific event categories (e.g., 'work', 'leisure') correlate with clothing items.")
-    st.write("- Identify which clothing items are frequently used for particular event categories.")
-
 
 
 with tab3:
@@ -519,7 +508,6 @@ with tab3:
         event_df["duration"] = event_df["duration"].astype(float)
         event_df["date"] = event_df["start_time"].dt.date
 
-        st.write("Daily Event Heatmap")
         event_df["hour"] = event_df["start_time"].dt.hour
         plot_heatmap(event_df, "hour", "date", "title", "Daily Event Heatmap", "Hour of Day", "Date")
 
