@@ -374,16 +374,20 @@ def analyze_closet_item_totals(closet_data):
     closet_df["created_at"] = pd.to_datetime(closet_df["created_at"], errors="coerce")
     closet_df.dropna(subset=["created_at"], inplace=True)
 
-    # Group by date of addition
+    # Group by date (only date part, exclude time) for aggregation
     closet_df["date_added"] = closet_df["created_at"].dt.date
     grouped = closet_df.groupby("date_added").size().reset_index(name="new_items")
 
-    # Calculate cumulative sum for total items over time
+    # Calculate cumulative total for total items over time
     grouped["total_items"] = grouped["new_items"].cumsum()
 
     # Plot the data
     st.line_chart(data=grouped.set_index("date_added")[["total_items"]], use_container_width=True)
 
+    # Add textual insights
+    st.write("### Insights:")
+    st.write("- Track the growth of your closet over time.")
+    st.write("- Identify any spikes or patterns in your spending habits.")
 
 
 def analyze_weather_clothing_correlation(weather_data, clothes_df):
