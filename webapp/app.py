@@ -476,19 +476,39 @@ def analyze_weather_clothing_trends_over_time(weather_data, clothes_df):
     # Merge data on date
     merged_df = pd.merge(clothes_df, weather_df, on="date", how="inner")
 
-    # Group clothing usage by weather condition over time
+    # Group clothing usage by weather condition and date
     grouped = merged_df.groupby(["weather", "date"]).size().reset_index(name="counts")
 
-    # Pivot table for line chart
+    # Pivot table for plotting
     pivot_table = grouped.pivot(index="date", columns="weather", values="counts").fillna(0)
 
-    # Plot time-series chart
-    st.line_chart(pivot_table)
+    # Plot with markers, legend, and title
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    for weather_condition in pivot_table.columns:
+        ax.plot(
+            pivot_table.index,
+            pivot_table[weather_condition],
+            marker="o",
+            label=weather_condition.capitalize()
+        )
+
+    # Formatting the plot
+    ax.set_title("Weather-Based Clothing Usage Trends Over Time", fontsize=16, pad=15)
+    ax.set_xlabel("Date", fontsize=12)
+    ax.set_ylabel("Usage Count", fontsize=12)
+    ax.legend(title="Weather Condition", bbox_to_anchor=(1.05, 1), loc="upper left", fontsize=10)
+    ax.grid(True, linestyle="--", alpha=0.6)
+    fig.autofmt_xdate(rotation=45)
+
+    # Render the plot in Streamlit
+    st.pyplot(fig)
 
     # Insights
     st.write("### Insights:")
-    st.write("- Observe how different weather conditions influence clothing choices over time.")
-    st.write("- Identify patterns in clothing usage for specific weather conditions.")
+    st.write("- Observe how different weather conditions (e.g., rain, clear skies) influence clothing usage over time.")
+    st.write("- Identify trends for specific weather conditions and plan recommendations accordingly.")
+
 
 
 with tab3:
