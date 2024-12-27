@@ -126,41 +126,13 @@ def plot_heatmap(dataframe, x_col, y_col, agg_col, title, xlabel, ylabel):
     plt.yticks(range(len(pivot_table.index)), pivot_table.index)
     st.pyplot(plt)
 
-def log_recommendation_to_supabase(recommendation, weather, events=None, recommendation_type="general"):
-    """
-    Log the generated recommendation to Supabase for tracking.
-    recommendation_type: "general" for text-based recommendations, "outfit" for specific item recommendations.
-    """
-    try:
-        log_data = {
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "type": recommendation_type,
-            "weather": weather,  # Store weather info at the time
-        }
-
-        if recommendation_type == "general":
-            # Log general recommendations as plain text
-            log_data["recommendation"] = recommendation
-            log_data["events"] = None
-        elif recommendation_type == "outfit":
-            # Log outfit recommendations as structured data
-            log_data["recommendation"] = recommendation  # Store the outfit recommendation JSON
-            log_data["events"] = events  # Store associated event data
-
-        # Save to Supabase
-        supabase.table("recommendation-logs").insert(log_data).execute()
-        print("Recommendation logged successfully!")
-    except Exception as e:
-        print(f"Error logging recommendation: {e}")
-
-
 # -----------------------------------
 # Streamlit Tabs
 # -----------------------------------
 
 st.title("IoT Closet Manager")
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["Recommendations", "My Closet", "Trends Overview", "Time-Series Analysis", "Correlation Analysis"])
+tab1, tab2, tab3, tab4 = st.tabs(["Recommendations", "My Closet", "Trends Overview", "Time-Series Analysis"])
 
 # Recommendations --------------------------------
 # Define a dark mode style
@@ -219,16 +191,9 @@ with tab1:
                 if isinstance(recommendations, str):
                     st.success("Recommendation Generated!")
                     st.text_area("General Recommendation", recommendations, height=150)
-                    # Log general recommendation to Supabase
-                    log_recommendation_to_supabase(
-                        recommendation=recommendations,
-                        weather=weather,
-                        recommendation_type="general"
-                    )
                 elif recommendations and isinstance(recommendations, dict):
                     st.success("Recommendation Generated!")
                     st.subheader("Your Outfit Recommendation:")
-
                     for category, item in recommendations.items():
                         image_html = f"""
                         <div style="text-align: center; margin-bottom: 20px;">
@@ -238,14 +203,6 @@ with tab1:
                         </div>
                         """ 
                         st.markdown(image_html, unsafe_allow_html=True)
-                
-                # Log outfit recommendation to Supabase
-                    log_recommendation_to_supabase(
-                        recommendation=recommendations,
-                        weather=weather,
-                        events=remaining_events,
-                        recommendation_type="outfit"
-                    )
                 else:
                     st.warning("No recommendation generated. Please check your data.")
             except Exception as e:
@@ -427,115 +384,6 @@ def analyze_closet_item_totals(closet_data):
     # Plot the data
     st.line_chart(data=grouped.set_index("date_added")[["total_items"]], use_container_width=True)
 
-
-def analyze_weather_clothing_correlation(weather_data, clothes_df):
-    """
-    Analyze the correlation between weather data and clothing usage with temperature as individual degree columns.
-    """
-
-    if not weather_data or clothes_df.empty:
-        st.warning("Insufficient data for correlation analysis.")
-        return
-
-    # Convert weather data to a DataFrame
-    weather_df = pd.DataFrame(weather_data)
-    weather_df["created_at"] = pd.to_datetime(weather_df["created_at"], errors="coerce")
-    weather_df.dropna(subset=["created_at"], inplace=True)
-
-    # Extract the date for correlation with clothing usage
-    weather_df["date"] = weather_df["created_at"].dt.date
-    weather_df["temp"] = weather_df["temp"].round().astype(int)  # Round temperature to nearest integer
-
-    # Analyze clothing item usage by name over dates
-    clothes_df["date"] = pd.to_datetime(clothes_df["created_at"], errors="coerce").dt.date
-
-    # Merge weather and clothing data on dates
-    merged_df = pd.merge(clothes_df, weather_df, on="date", how="inner")
-
-    # Group clothing usage by temperature and names
-    grouped = merged_df.groupby(["temp", "name"]).size().reset_index(name="counts")
-
-    # Pivot table for visualization
-    pivot_table = grouped.pivot(index="name", columns="temp", values="counts").fillna(0)
-
-    # Plot a heatmap with Matplotlib
-    fig, ax = plt.subplots(figsize=(12, 8))
-    cax = ax.matshow(pivot_table, cmap="coolwarm", aspect="auto")
-    plt.colorbar(cax, ax=ax)
-
-    # Set axis labels and titles
-    ax.set_title("Clothing Usage vs. Temperature (Per °C)", pad=20)
-    ax.set_xlabel("Temperature (°C)")
-    ax.set_ylabel("Clothing Item")
-    ax.set_xticks(range(len(pivot_table.columns)))
-    ax.set_xticklabels(pivot_table.columns, rotation=45, ha="right")
-    ax.set_yticks(range(len(pivot_table.index)))
-    ax.set_yticklabels(pivot_table.index)
-
-    # Render the plot in Streamlit
-    st.pyplot(fig)
-
-def analyze_event_category_clothing_correlation(event_data, clothes_df):
-    """
-    Analyze the correlation between event categories and clothing usage.
-    """
-
-    if not event_data or clothes_df.empty:
-        st.warning("Insufficient data for correlation analysis.")
-        return
-
-    # Convert event data to a DataFrame
-    event_df = pd.DataFrame(event_data)
-    event_df["start_time"] = pd.to_datetime(event_df["start_time"], errors="coerce")
-    event_df["date"] = event_df["start_time"].dt.date
-
-    # Categorize events
-    def get_event_category(title):
-        categories = {
-            "work": ["meeting", "office", "work"],
-            "dining": ["brunch", "lunch", "dinner"],
-            "social": ["party", "club", "gathering", "games"],
-            "sport": ["gym", "exercise", "running"],
-            "leisure": ["movie", "museum", "picnic", "festival"],
-            "appointment": ["appointment"],
-            "festive": ["christmas", "birthday", "new years"]
-        }
-        for category, keywords in categories.items():
-            if any(keyword in title.lower() for keyword in keywords):
-                return category
-        return "other"
-
-    event_df["event_category"] = event_df["title"].apply(get_event_category)
-
-    # Analyze clothing item usage by event category and name
-    clothes_df["date"] = pd.to_datetime(clothes_df["created_at"], errors="coerce").dt.date
-
-    # Merge event and clothing data on dates
-    merged_df = pd.merge(clothes_df, event_df, on="date", how="inner")
-
-    # Group clothing usage by event category and name
-    grouped = merged_df.groupby(["event_category", "name"]).size().reset_index(name="counts")
-
-    # Pivot table for visualization
-    pivot_table = grouped.pivot(index="name", columns="event_category", values="counts").fillna(0)
-
-    # Plot a heatmap with Matplotlib
-    fig, ax = plt.subplots(figsize=(12, 8))
-    cax = ax.matshow(pivot_table, cmap="coolwarm", aspect="auto")
-    plt.colorbar(cax, ax=ax)
-
-    # Set axis labels and titles
-    ax.set_title("Clothing Usage vs. Event Categories", pad=20)
-    ax.set_xlabel("Event Category")
-    ax.set_ylabel("Clothing Item")
-    ax.set_xticks(range(len(pivot_table.columns)))
-    ax.set_xticklabels(pivot_table.columns, rotation=45, ha="right")
-    ax.set_yticks(range(len(pivot_table.index)))
-    ax.set_yticklabels(pivot_table.index)
-
-    # Render the plot in Streamlit
-    st.pyplot(fig)
-
 # Fetch weather and calendar data once at the start to reuse across tabs
 weather_data = fetch_weather_data()
 calendar_events = fetch_calendar_events()
@@ -605,22 +453,3 @@ with tab4:
         st.subheader("Total Clothes Over Time")
         analyze_closet_item_totals(closet_items)
 
-# Tab 5: Correlations Analysis
-with tab5:
-    st.header("Correlations Analysis")
-
-    # Weather vs. Clothing Usage
-    if weather_data and closet_items:
-        st.subheader("Weather vs. Clothing Usage")
-        clothes_df = pd.DataFrame(closet_items)
-
-        # Analyze weather-clothing correlations
-        analyze_weather_clothing_correlation(weather_data, clothes_df)
-
-    # Event vs. Clothing Usage
-    if calendar_events and closet_items:
-        st.subheader("Event vs. Clothing Usage")
-        clothes_df = pd.DataFrame(closet_items)
-
-        # Analyze event-clothing correlations
-        analyze_event_category_clothing_correlation(calendar_events, clothes_df)
