@@ -8,7 +8,6 @@ import os
 import uuid
 from datetime import datetime, timezone
 import sys
-import seaborn as sns  # Add for heatmap
 import matplotlib.pyplot as plt  # For additional visualization
 from datetime import timedelta
 
@@ -333,11 +332,15 @@ with tab2:
 def plot_heatmap(dataframe, x_col, y_col, agg_col, title, xlabel, ylabel):
     pivot_table = dataframe.pivot_table(index=y_col, columns=x_col, values=agg_col, aggfunc='count', fill_value=0)
     plt.figure(figsize=(12, 8))
-    sns.heatmap(pivot_table, annot=True, fmt="d", cmap="Blues")
+    plt.imshow(pivot_table, cmap='Blues', interpolation='nearest')
+    plt.colorbar()
     plt.title(title)
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
+    plt.xticks(range(len(pivot_table.columns)), pivot_table.columns, rotation=90)
+    plt.yticks(range(len(pivot_table.index)), pivot_table.index)
     st.pyplot(plt)
+
 
 with tab3:
     st.header("My Database")
