@@ -276,17 +276,16 @@ with tab2:
 
         # Final confirmation to save
         if st.button("Confirm and Save Tags"):
-            if save_image_metadata_to_supabase(st.session_state["image_url"], tags):
-                st.success("Tags saved successfully!")
-                # Clear session state after saving
-                del st.session_state["image_url"]
+            if item_name:  # Ensure the user has entered a name for the item
+                if save_image_metadata_to_supabase(st.session_state["image_url"], tags, item_name):
+                    st.success("Tags saved successfully!")
+                    # Clear session state after saving
+                    del st.session_state["image_url"]
+                else:
+                    st.error("Failed to save tags.")
             else:
-                st.error("Failed to save tags.")
+                st.error("Please provide a name for the clothing item before saving.")
 
-            #"Start Over" button
-            if st.button("Start Over"):
-                st.session_state.clear()  # Clear all session state to reset the app
-                st.experimental_rerun()  # Rerun the app to start fresh
 
 
     st.subheader("My Closet")
